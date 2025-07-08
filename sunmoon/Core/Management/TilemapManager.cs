@@ -1,14 +1,13 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using SharpDX.X3DAudio;
 using sunmoon.Core.ECS;
 using sunmoon.Core.Factory;
 using sunmoon.Core.World;
+using sunmoon.utils;
 
 namespace sunmoon.Core.Management
 {
@@ -21,16 +20,6 @@ namespace sunmoon.Core.Management
         public MapData CurrentMapData { get; private set; }
 
         private readonly Dictionary<Point, Chunk> _chunks = new Dictionary<Point, Chunk>();
-
-        private int FloorDiv(int a, int n)
-        {
-            return (int)Math.Floor((double)a / n);
-        }
-
-        private int Mod(int a, int n)
-        {
-            return ((a % n) + n) % n;
-        }
 
         public void LoadMapFromFile(string filePath)
         {
@@ -69,8 +58,8 @@ namespace sunmoon.Core.Management
         public void SetTile(int tileX, int tileY, string prefabName)
         {
 
-            int chunkX = FloorDiv(tileX, Chunk.CHUNK_WIDTH);
-            int chunkY = FloorDiv(tileY, Chunk.CHUNK_HEIGHT);
+            int chunkX = MathUtils.FloorDiv(tileX, Chunk.CHUNK_WIDTH);
+            int chunkY = MathUtils.FloorDiv(tileY, Chunk.CHUNK_HEIGHT);
 
             var chunkPosition = new Point(chunkX, chunkY);
 
@@ -81,8 +70,8 @@ namespace sunmoon.Core.Management
             }
 
 
-            int localX = Mod(tileX, Chunk.CHUNK_WIDTH);
-            int localY = Mod(tileY, Chunk.CHUNK_HEIGHT);
+            int localX = MathUtils.Mod(tileX, Chunk.CHUNK_WIDTH);
+            int localY = MathUtils.Mod(tileY, Chunk.CHUNK_HEIGHT);
 
             int tileSize = CurrentMapData?.TileSize ?? DEFAULT_TILE_SIZE;
             var tilePosition = new Vector2(tileX * tileSize, tileY * tileSize);
