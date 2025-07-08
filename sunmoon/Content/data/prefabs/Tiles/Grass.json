@@ -1,0 +1,11 @@
+{
+    "inherits": "_BaseTile",
+    "components": {
+        "TagsComponent": {
+            "Tags": ["Tile", "Walkable"]
+        },
+        "SpriteRendererComponent": {
+            "TexturePath": "Textures/Tiles/Grass"
+        }
+    }
+}

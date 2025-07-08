@@ -1,0 +1,15 @@
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+[Bb]in/
+[Oo]bj/
+
+.idea/
+
+.DS_Store
+Thumbs.db
+
+Content/bin/
+Content/obj/

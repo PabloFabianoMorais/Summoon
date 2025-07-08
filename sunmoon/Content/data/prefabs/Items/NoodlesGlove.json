@@ -1,0 +1,8 @@
+{
+    "inherits": "_BaseEntity",
+    "components": {
+        "SpriteRendererComponent": {
+            "TexturePath": "Textures/Items/NoodlesGlove"
+        }
+    }
+}

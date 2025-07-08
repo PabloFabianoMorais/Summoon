@@ -1,0 +1,9 @@
+{
+    "isAbstract": true,
+    "components": {
+        "TagsComponent": {
+            "Tags": ["Entity"]
+        },
+        "TransformComponent": {}
+    }
+}

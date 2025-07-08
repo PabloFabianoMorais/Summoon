@@ -1,0 +1,28 @@
+{
+    "inherits": "_BaseEntity",
+    "components": 
+    {
+        "TransformComponent": {
+            "Scale": {"Y": 1, "X": 1}
+        },
+        "MovementComponent": {
+            "MovementSpeed": 200.0
+        },
+        "PlayerInputComponent": {
+            
+        },
+        "AnimatedSpriteComponent": {
+            "Animations": {
+                "Idle": {
+                    "Name": "Idle",
+                    "TexturePath": "Textures/Characters/base",
+                    "FrameWidth": 16,
+                    "FrameHeight": 16,
+                    "FrameCount": 2,
+                    "FrameDuration": 0.5,
+                    "IsLooping": true
+                }
+            }
+        }
+    }
+}
