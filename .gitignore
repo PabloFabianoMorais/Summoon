@@ -3,6 +3,9 @@
 *.userosscache
 *.sln.docstates
 
+.vscode/
+.config/
+
 [Bb]in/
 [Oo]bj/
 
