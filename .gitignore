@@ -16,3 +16,6 @@ Thumbs.db
 
 Content/bin/
 Content/obj/
+
+git rm -r --cached sunmoon/.config
+git rm -r --cached sunmoon/.vscode
