@@ -101,7 +101,6 @@ namespace sunmoon.Scenes
                     _debugPanel.IsVisible = true;
                 }
             }
-            
             GameObjectManager.Update(gameTime);
 
             if (_player != null)

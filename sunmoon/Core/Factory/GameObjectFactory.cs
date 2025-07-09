@@ -20,6 +20,10 @@ namespace sunmoon.Core.Factory
 
         private static JsonSerializerSettings _serializerSettings;
 
+        /// <summary>
+        /// Inicializa a fábrica carregando todas as definições de prefab (.json) da pasta de conteúdo da memória
+        /// </summary>
+        /// <param name="content">O ContentManager principal do jogo, usado para carregar assets para componentes.</param>
         public static void Initialize(ContentManager content)
         {
             _content = content;
@@ -32,7 +36,6 @@ namespace sunmoon.Core.Factory
                 }
             };
 
-            // Ler o prefabs para fabricação dos objetos
             _prefabsData = new JObject();
 
             string prefabsRootPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content/data/prefabs");
@@ -54,9 +57,16 @@ namespace sunmoon.Core.Factory
             }
         }
 
+        /// <summary>
+        /// Cria um novo GameObject com base em um definição de prefab, aplicando opcionalmente dados de mesclagem.
+        /// </summary>
+        /// <param name="prefabName">Nome do prefab válido.</param>
+        /// <param name="overrides">Um JObject contendo propriedades para mesclar sobre os dados do prefab base, definindo instâncias únicas.</param>
+        /// <returns>Um GameObject totalmente inicializado e construído, pronto para ser adicionado ao mundo do jogo.</returns>
+        /// <exception cref="ArgumentException">Lançada caso o nome do especificado não for encontrado em prefabs.</exception>
+        /// <exception cref="Exception">Lançada se o nome do componente especificado no prefab não corresponder a nenhuma classe de comopnente existente.</exception>
         public static GameObject Create(string prefabName, JObject overrides = null)
         {
-            // Encontra a definição do prefab JSON
             if (!_prefabsData.TryGetValue(prefabName, out JToken prefabToken))
                 throw new ArgumentException($"Prefab com nome {prefabName} não encontrado");
 
@@ -104,7 +114,10 @@ namespace sunmoon.Core.Factory
 
         private static JObject GetMergedPrefabData(string prefabName)
         {
+
+
             if (!_prefabsData.TryGetValue(prefabName, out JToken prefabToken))
+
                 throw new ArgumentException($"Prefab com nome '{prefabName}' não encontrado.");
 
             var prefabData = (JObject)prefabToken.DeepClone();

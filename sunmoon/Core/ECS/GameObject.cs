@@ -7,12 +7,13 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace sunmoon.Core.ECS
 {
-
+    /// <summary>
+    /// Representa a 'Entidade' na arquitetura Entidade-Componente-Sistema (ECS).
+    /// É um contêiner universal para Componentes, que definem seu comportamento e dados.
+    /// </summary>
     public class GameObject
     {
         public long Id { get; set; }
-
-        // Lista de componentes
         private readonly List<Component> _allComponents = new List<Component>();
         private readonly List<IDrawableComponent> _drawableComponents = new List<IDrawableComponent>();
         private readonly List<IUpdatableComponent> _updatableComponents = new List<IUpdatableComponent>();
@@ -21,12 +22,14 @@ namespace sunmoon.Core.ECS
 
         public GameObject() { }
 
+        /// <returns>Retorna todos os componentes do objeto</returns>
         public List<Component> GetAllComponents()
         {
             return _allComponents;
         }
 
-        // Adiciona um componente
+        /// <typeparam name="T">Deve ser do tipo Component</typeparam>
+        /// <returns>Componente adicionado</returns>
         public T AddComponent<T>() where T : Component, new()
         {
             T newComponent = new T();
@@ -42,6 +45,12 @@ namespace sunmoon.Core.ECS
             return newComponent;
         }
 
+        /// <summary>
+        /// Adiciona um componente à lista de componentes e atribui suas heranças.
+        /// </summary>
+        /// <param name="componentType">Tipo de component que deve ser do tipo Component.</param>
+        /// <returns>Componente adicionado.</returns>
+        /// <exception cref="ArgumentException">Se o tipo do componente não for Component.</exception>
         public Component AddComponent(Type componentType)
         {
             if (!typeof(Component).IsAssignableFrom(componentType))
@@ -62,12 +71,15 @@ namespace sunmoon.Core.ECS
         }
 
 
-        // Procura um componente
+        /// <returns>Procura o componente específicado.</returns>
         public T GetComponent<T>() where T : Component
         {
             return _allComponents.OfType<T>().FirstOrDefault();
         }
 
+        /// <summary>
+        /// Remove o componente especificado.
+        /// </summary>
         public void RemoveComponent<T>() where T : Component
         {
             T component = GetComponent<T>();
@@ -80,7 +92,6 @@ namespace sunmoon.Core.ECS
             _allComponents.Remove(component);
         }
 
-        // Inicializa os componentes
         public virtual void Initialize()
         {
             foreach (Component component in _allComponents)
@@ -89,7 +100,7 @@ namespace sunmoon.Core.ECS
             }
         }
 
-        // Executa funções de atualização, se houver
+
         public virtual void Update(GameTime gameTime)
         {
             foreach (IUpdatableComponent component in _updatableComponents)
@@ -98,7 +109,6 @@ namespace sunmoon.Core.ECS
             }
         }
 
-        // Executa funções de rederização, se houver
         public virtual void Draw(SpriteBatch spriteBatch)
         {
             foreach (IDrawableComponent component in _drawableComponents)

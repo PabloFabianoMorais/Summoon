@@ -19,6 +19,10 @@ namespace sunmoon.Core.World
             Rotation = 0.0f;
         }
 
+        /// <summary>
+        /// Gera uma matriz de visualização 2D que leva em conta posição, rotação e zoom.
+        /// </summary>
+        /// <returns>Uma matriz de visualização para ser usada como perspectiva.</returns>
         public Matrix GetViewMatrix()
         {
             return

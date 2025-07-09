@@ -11,8 +11,9 @@ using sunmoon.utils;
 
 namespace sunmoon.Core.Management
 {
-
-
+    /// <summary>
+    /// Gerencia o mapa, chunks e tiles.
+    /// </summary>
     public class TilemapManager
     {
         public const int DEFAULT_TILE_SIZE = 8;
@@ -21,6 +22,9 @@ namespace sunmoon.Core.Management
 
         private readonly Dictionary<Point, Chunk> _chunks = new Dictionary<Point, Chunk>();
 
+        /// Carrega o mapa de um arquivo JSON especificado.
+        /// <param name="filePath">Caminho absoluto ou relativo para o arquivo JSON do mapa.</param>
+        /// <exception cref="System.Exception">Herro ao abrir ou desserializar o arquivo.</exception>
         public void LoadMapFromFile(string filePath)
         {
             _chunks.Clear();
@@ -55,6 +59,11 @@ namespace sunmoon.Core.Management
             }
         }
 
+        /// Cria um tile com posição e nome do prefab específicados adicionando o tile à um chunk correspondente
+        /// <param name="tileX">Coordenada X na grade de tiles.</param>
+        /// <param name="tileX">Coordenada Y na grade de tiles.</param>
+        /// <param name="prefabName">Nome do prefab que deve corresponder à um arquivo JSON válido.</param>
+        /// <exception cref="System.ArgumentException">Lançada se o prefab com o nome especificado não for encontrado pela GameObjectFactory.</exception>
         public void SetTile(int tileX, int tileY, string prefabName)
         {
 

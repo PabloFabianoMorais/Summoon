@@ -4,6 +4,9 @@ using Newtonsoft.Json;
 
 namespace sunmoon.Core
 {
+    /// <summary>
+    /// Estrutura de dados para um animação.
+    /// </summary>
     public class Animation
     {
         public string Name { get; set; }

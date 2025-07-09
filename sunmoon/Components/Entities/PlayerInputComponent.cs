@@ -22,6 +22,8 @@ namespace sunmoon.Components
             KeyboardState keyboardState = Keyboard.GetState();
 
             // Movemento WASD
+            // FIXME: Se o jogador pressionar duas teclas opostas ao mesmo tempo elas
+            //  irão se anular. Dar prioridade a última tecla pressionada
             if (InputManager.IsActionDown("MoveRight"))
                 _movementComponent.Velocity.X += _movementComponent.MovementSpeed;
             if (InputManager.IsActionDown("MoveLeft"))

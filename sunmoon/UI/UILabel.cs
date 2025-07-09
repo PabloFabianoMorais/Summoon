@@ -31,6 +31,7 @@ namespace sunmoon.UI
         {
             if (!IsVisible) return;
 
+            // TODO: Implementar lódica de quebra de linha (word-wrapping) para textos longos.
             spriteBatch.DrawString(Font, _chachedString, AbsolutePosition, Color);
         }
     }

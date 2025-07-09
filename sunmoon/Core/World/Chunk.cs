@@ -21,6 +21,12 @@ namespace sunmoon.Core.World
             _tiles = new GameObject[CHUNK_WIDTH, CHUNK_HEIGHT];
         }
 
+        /// <summary>
+        /// Adiciona um tile se a posição estiver dentro dos limites da chunk.
+        /// </summary>
+        /// <param name="x">Posição X na grade da chunk.</param>
+        /// <param name="y">Posição Y na grade da chunk.</param>
+        /// <param name="tile">GameObject a ser adicoinado.</param>
         public void SetTile(int x, int y, GameObject tile)
         {
             if (x < 0 || x >= CHUNK_WIDTH || y < 0 || y >= CHUNK_HEIGHT)

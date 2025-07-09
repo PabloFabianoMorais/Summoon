@@ -6,6 +6,9 @@ using sunmoon.Core.ECS;
 
 namespace sunmoon.Core.Management
 {
+    /// <summary>
+    /// Gerencia e organiza GameObjects
+    /// </summary>
     public class GameObjectManager
     {
         private readonly List<GameObject> _gameObjects = new List<GameObject>();
@@ -46,7 +49,7 @@ namespace sunmoon.Core.Management
                 gameObject.Update(gameTime);
             }
 
-            ProcessRemoval();
+            ProcessRemoval(); // Garante que todos os objetos pendentes para remoção foram removidos
         }
 
         public void Draw(SpriteBatch spriteBatch)
@@ -59,6 +62,7 @@ namespace sunmoon.Core.Management
 
         private void ProcessAdditions()
         {
+            // Adiciona todos os objetos pendentes para serem adicionados
             if (_addedGameObjects.Count == 0) return;
 
             foreach (var gameObject in _addedGameObjects)
@@ -76,6 +80,7 @@ namespace sunmoon.Core.Management
 
         private void ProcessRemoval()
         {
+            // Remove todos os objetos pendentes para serem removidos
             if (_removedGameObjects.Count == 0) return;
 
             foreach (var gameObject in _removedGameObjects)

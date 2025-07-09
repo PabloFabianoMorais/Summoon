@@ -5,6 +5,9 @@ using Microsoft.Xna.Framework.Input;
 
 namespace sunmoon.Core.Management
 {
+    /// <summary>
+    /// Gerencia, manipula e mapeia as ações de entrada do usuário.
+    /// </summary>
     public static class InputManager
     {
         private static KeyboardState _currentKeyboardState;
@@ -33,21 +36,41 @@ namespace sunmoon.Core.Management
             _currentMouseState = Mouse.GetState();
         }
 
+        /// <summary>
+        /// Retorna true se a tecla for pressionada.
+        /// </summary>
+        /// <param name="key">Tecla a ser verificada.</param>
+        /// <returns>True ou false</returns>
         public static bool IsKeyDown(Keys key)
         {
             return _currentKeyboardState.IsKeyDown(key);
         }
 
+        /// <summary>
+        /// Retorna true se a tecla foi pressionada nesse exato frame.
+        /// </summary>
+        /// <param name="key">Tecla a ser verificada.</param>
+        /// <returns>rue ou false</returns>
         public static bool WasKeyPressed(Keys key)
         {
             return _currentKeyboardState.IsKeyDown(key) && _previousKeyboardState.IsKeyUp(key);
         }
 
+        /// <summary>
+        /// Retorna true se a tecla foi solta nesse exato frame.
+        /// </summary>
+        /// <param name="key">Tecla a ser verificada.</param>
+        /// <returns>True ou false</returns>
         public static bool WasKeyReleased(Keys key)
         {
             return _currentKeyboardState.IsKeyUp(key) && _previousKeyboardState.IsKeyDown(key);
         }
 
+        /// <summary>
+        /// Verifica se uma ação foi acionada.
+        /// </summary>
+        /// <param name="action">O nome da ação a ser verificada</param>
+        /// <returns>True ou false</returns>
         public static bool IsActionDown(string action)
         {
             if (_keyMappings.TryGetValue(action, out var key))
@@ -57,6 +80,11 @@ namespace sunmoon.Core.Management
             return false;
         }
 
+        /// <summary>
+        /// Verifica se uma ação que foi acionada nesse exato frame.
+        /// </summary>
+        /// <param name="action">O nome da ação a ser verificada</param>
+        /// <returns>True ou false</returns>
         public static bool IsActionPressed(string action)
         {
             if (_keyMappings.TryGetValue(action, out var key))
@@ -66,6 +94,11 @@ namespace sunmoon.Core.Management
             return false;
         }
 
+        /// <summary>
+        /// Verifica se uma ação que foi solta nesse exato frame.
+        /// </summary>
+        /// <param name="action">O nome da ação a ser verificada</param>
+        /// <returns>True ou false</returns>
         public static bool IsActionReleased(string action)
         {
             if (_keyMappings.TryGetValue(action, out var key))

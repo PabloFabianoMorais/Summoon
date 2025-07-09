@@ -3,6 +3,9 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace sunmoon.utils
 {
+    /// <summary>
+    /// Oferece uma coleção de funções relacionadas à gráficos.
+    /// </summary>
     public static class GraphicsUtils
     {
         private static Texture2D _pixelTexture;

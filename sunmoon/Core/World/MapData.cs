@@ -5,6 +5,9 @@ using Newtonsoft.Json;
 
 namespace sunmoon.Core.World
 {
+    /// <summary>
+    /// Estrutura de dados para mapas.
+    /// </summary>
     public class MapData
     {
         [JsonProperty("name")]

@@ -59,6 +59,8 @@ namespace sunmoon.Components.Common
 
                 if (_currentFrameIndex >= _currentAnimation.FrameCount)
                 {
+                    // Se a animação não deve repetir, nós a "congelamos" no último frame
+                    // Decrementando o índice de volta para o valor máximo válido.
                     _currentFrameIndex = 0;
                 }
                 else if (!_currentAnimation.IsLooping)
