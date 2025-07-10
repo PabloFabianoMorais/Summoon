@@ -4,8 +4,8 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
-using sunmoon.Core;
 using sunmoon.Core.ECS;
+using sunmoon.Core.Graphics;
 
 namespace sunmoon.Components.Common
 {
@@ -104,6 +104,11 @@ namespace sunmoon.Components.Common
             CurrentAnimationName = animationName;
             _currentFrameIndex = 0;
             _timer = 0f;
+        }
+
+        public Animation GetCurrentAnimation()
+        {
+            return _currentAnimation;
         }
     }
 }

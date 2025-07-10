@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using sunmoon.Components;
+using sunmoon.Components.Common;
 
 
 namespace sunmoon.Core.ECS
@@ -17,6 +19,40 @@ namespace sunmoon.Core.ECS
         private readonly List<Component> _allComponents = new List<Component>();
         private readonly List<IDrawableComponent> _drawableComponents = new List<IDrawableComponent>();
         private readonly List<IUpdatableComponent> _updatableComponents = new List<IUpdatableComponent>();
+        public Rectangle BoundingBox { get
+            {
+                var transform = GetComponent<TransformComponent>();
+                if (transform == null)
+                    return Rectangle.Empty;
+
+                int width = 0;
+                int height = 0;
+
+                var animSprite = GetComponent<AnimatedSpriteComponent>();
+
+                if (animSprite != null && animSprite.GetCurrentAnimation() != null)
+                {
+                    width = (int)(animSprite.GetCurrentAnimation().FrameWidth * transform.Scale.X);
+                    height = (int)(animSprite.GetCurrentAnimation().FrameHeight * transform.Scale.Y);
+                }
+                else
+                {
+                    var sprite = GetComponent<SpriteRendererComponent>();
+                    if (sprite != null && sprite.Texture != null)
+                    {
+                        width = (int)(sprite.Texture.Width * transform.Scale.X);
+                        height = (int)(sprite.Texture.Height * transform.Scale.Y);
+                    }
+                }
+
+                return new Rectangle(
+                    (int)transform.Position.X,
+                    (int)transform.Position.Y,
+                    width,
+                    height
+                );
+            }
+        }
 
 
 
@@ -91,6 +127,7 @@ namespace sunmoon.Core.ECS
                 _updatableComponents.Remove(updatable);
             _allComponents.Remove(component);
         }
+
 
         public virtual void Initialize()
         {

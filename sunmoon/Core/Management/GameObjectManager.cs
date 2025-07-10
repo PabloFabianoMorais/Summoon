@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using sunmoon.Components;
 using sunmoon.Core.ECS;
+using sunmoon.Core.World;
 
 namespace sunmoon.Core.Management
 {
@@ -17,6 +19,7 @@ namespace sunmoon.Core.Management
 
         private readonly List<GameObject> _addedGameObjects = new List<GameObject>();
         private readonly List<GameObject> _removedGameObjects = new List<GameObject>();
+        private int _renderedObjectsCount = 0;
 
         public void Add(GameObject gameObject)
         {
@@ -31,6 +34,11 @@ namespace sunmoon.Core.Management
         public int GetObjectsCount()
         {
             return _gameObjects.Count;
+        }
+
+        public int GetRenderedObjectsCount()
+        {
+            return _renderedObjectsCount;
         }
 
         public GameObject Find(long id)
@@ -52,11 +60,18 @@ namespace sunmoon.Core.Management
             ProcessRemoval(); // Garante que todos os objetos pendentes para remoção foram removidos
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, Camera camera)
         {
+            Rectangle cameraBounds = camera.GetVisibleArea();
+            _renderedObjectsCount = 0;
+
             foreach (var gameObject in _gameObjects)
             {
-                gameObject.Draw(spriteBatch);
+                if (cameraBounds.Intersects(gameObject.BoundingBox))
+                {
+                    gameObject.Draw(spriteBatch);
+                    _renderedObjectsCount++;
+                }
             }
         }
 

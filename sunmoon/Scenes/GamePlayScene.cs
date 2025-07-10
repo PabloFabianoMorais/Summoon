@@ -3,7 +3,6 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using sunmoon.Core.Management;
 using sunmoon.Core.Factory;
-using Microsoft.Xna.Framework.Input;
 using sunmoon.Core.ECS;
 using sunmoon.Core.World;
 using System;
@@ -18,7 +17,7 @@ namespace sunmoon.Scenes
         private Camera _camera;
         private GameObject _player;
         public UIManager uiManager;
-        private UIPanel _debugPanel = new UIPanel(new Point(300, 400), new Vector2(0, 0), new Color(0, 0, 0, 100));
+        private UIPanel _debugPanel;
 
 
         private TransformComponent _playerTransform;
@@ -30,15 +29,22 @@ namespace sunmoon.Scenes
             if (graphicsDeviceService == null)
                 throw new InvalidOperationException($"IGraphicsDevice não encontrado. O serviço não foi registrado corretamente.");
 
+            var worldGenerator = new WorldGenerator(0);
+            TilemapManager = new TilemapManager(worldGenerator);
+
+            for (int y = -3; y <= 1; y++)
+            {
+                for (int x = -3; x <= 1; x++)
+                {
+                    TilemapManager.GenerateChunk(x, y);
+                }
+            }
 
             _camera = new Camera(graphicsDeviceService.GraphicsDevice.Viewport);
             _camera.Zoom = 3;
 
 
             GameObjectManager = new GameObjectManager();
-            TilemapManager = new TilemapManager();
-            TilemapManager.LoadMapFromFile("Content/data/maps/level_01.map.json");
-
 
             _player = GameObjectFactory.Create("Player");
             _playerTransform = _player.GetComponent<TransformComponent>();
@@ -48,17 +54,7 @@ namespace sunmoon.Scenes
 
             var font = content.Load<SpriteFont>("Fonts/DebugFont");
 
-            _debugPanel = new UIPanel(new Point(300, 400), new Vector2(0, 0), new Color(0, 0, 0, 100));
-            var stackPanel = new UIStackPanel(new Vector2(0, 0), 2f);
-
-            var playerPosLabel = new UILabel(font, () => $"Posição: X={Math.Floor(_playerTransform.Position.X)}, Y={Math.Floor(_playerTransform.Position.Y)}", Vector2.Zero, Color.White);
-            var objectsNumberLabel = new UILabel(font, () => $"Número de objetos: {GameObjectManager.GetObjectsCount()}", Vector2.Zero, Color.White);
-
-
-            stackPanel.AddChild(playerPosLabel);
-            stackPanel.AddChild(objectsNumberLabel);
-            _debugPanel.AddChild(stackPanel);
-            _debugPanel.IsVisible = false;
+            _debugPanel = new DebugPanel(font, _player.GetComponent<TransformComponent>(), GameObjectManager, TilemapManager);
             uiManager.AddElement(_debugPanel);
         }
 
@@ -74,8 +70,8 @@ namespace sunmoon.Scenes
                 samplerState: SamplerState.PointClamp
             );
 
-            TilemapManager.Draw(spriteBatch);
-            GameObjectManager.Draw(spriteBatch);
+            TilemapManager.Draw(spriteBatch, _camera);
+            GameObjectManager.Draw(spriteBatch, _camera);
 
             spriteBatch.End();
 
@@ -90,8 +86,6 @@ namespace sunmoon.Scenes
 
         public override void Update(GameTime gameTime)
         {
-            if (InputManager.IsActionReleased("ReloadMap"))
-                TilemapManager.LoadMapFromFile("Content/data/maps/level_01.map.json");
             if (InputManager.IsActionPressed("ToggleDebug"))
             {
                 if (_debugPanel.IsVisible)
@@ -101,6 +95,7 @@ namespace sunmoon.Scenes
                     _debugPanel.IsVisible = true;
                 }
             }
+
             GameObjectManager.Update(gameTime);
 
             if (_player != null)

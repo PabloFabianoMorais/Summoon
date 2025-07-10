@@ -101,11 +101,13 @@ namespace sunmoon.Core.Management
         /// <returns>True ou false</returns>
         public static bool IsActionReleased(string action)
         {
+            
             if (_keyMappings.TryGetValue(action, out var key))
             {
                 return WasKeyReleased(key);
             }
             return false;
         }
+
     }
 }

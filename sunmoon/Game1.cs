@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using sunmoon.Core.Factory;
 using sunmoon.Core.Management;
+using sunmoon.Core.Services;
 using sunmoon.Scenes;
 
 namespace sunmoon;
@@ -17,6 +18,9 @@ public class Game1 : Game
         _graphics = new GraphicsDeviceManager(this);
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
+
+        _graphics.SynchronizeWithVerticalRetrace = false;
+        IsFixedTimeStep = false;
     }
 
     protected override void Initialize()
@@ -42,6 +46,7 @@ public class Game1 : Game
 
         InputManager.Update();
         SceneManager.Update(gameTime);
+        DebugService.Update(gameTime);
 
         base.Update(gameTime);
     }
@@ -49,7 +54,6 @@ public class Game1 : Game
     protected override void Draw(GameTime gameTime)
     {
         GraphicsDevice.Clear(Color.HotPink);
-
 
         SceneManager.Draw(_spriteBatch);
 

@@ -2,7 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json;
 
-namespace sunmoon.Core
+namespace sunmoon.Core.Graphics
 {
     /// <summary>
     /// Estrutura de dados para um animação.
