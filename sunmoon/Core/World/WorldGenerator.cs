@@ -36,7 +36,7 @@ namespace sunmoon.Core.World
         {
             float noiseValue = _noise.GetNoise(x, y);
 
-            if (noiseValue < -0.5)
+            if (noiseValue < -0.2)
                 return TileType.Water;
             else
                 return TileType.Grass;

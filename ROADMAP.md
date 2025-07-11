@@ -23,9 +23,15 @@ Funcionalidades maiores, em ordem aproximada de implementação.
 - [x] Geração procedural de mundo (baseada em ruído).
 - [x] Geração de chunks paralela e incremental.
 - [ ] **Ciclo Dia/Noite:**
-    - [ ] Sistema de tempo global.
+    - [X] Sistema de tempo global.
     - [ ] Efeitos visuais (mudança de cor/luz).
-    - [ ] Transição de estado Dia <-> Noite.
+    - [X] Transição de estado Dia <-> Noite.
+- [ ] **Sistema de inventário**
+    - [ ] Áreas de gerenciamento de itens.
+    - [ ] 2 Espaços de item para segura-los na mão para utiliza-lo se forem utilizáveis, como armas.
+    - [ ] 3 Espaços para itens de armadura.
+    - [ ] 1 Espaço para itens de mochila.
+    - [ ] Sistema de peso de itens.
 - [ ] **Sistema de Combate:**
     - [ ] Componente de Vida (HealthComponent).
     - [ ] Ataque básico do jogador.
@@ -35,7 +41,6 @@ Funcionalidades maiores, em ordem aproximada de implementação.
     - [ ] Comportamento básico (seguir o jogador).
 - [ ] **Sistema de Construção:**
     - [ ] Coleta de recursos (árvores, pedras).
-    - [ ] Inventário do jogador.
     - [ ] Habilidade de colocar estruturas (torres).
 - [ ] **IA das Torres:**
     - [ ] Detecção e ataque a alvos.
@@ -51,6 +56,7 @@ Use `[ ]` para tarefas a fazer e `[x]` para as concluídas.
 - [ ] Criar o `HealthComponent` para o jogador.
 
 ### Prioridade Média (Fazer em Breve)
+- [ ] Criar uma suaviazação da transição de tiles.
 - [ ] Adicionar mais tipos de tiles e biomas ao `WorldGenerator`.
 - [ ] Criar o primeiro tipo de monstro com prefab e IA básica.
 - [ ] Descarregar chunks distantes para liberar memória.
@@ -59,7 +65,6 @@ Use `[ ]` para tarefas a fazer e `[x]` para as concluídas.
 - [ ] Adicionar efeitos sonoros para passos do jogador.
 - [ ] Criar um menu principal para o jogo.
 - [ ] Refatorar o `DebugPanel` para ser mais customizável.
-- [ ] Criar uma suaviazação da transição de tiles.
 
 ---
 
@@ -68,10 +73,7 @@ Use `[ ]` para tarefas a fazer e `[x]` para as concluídas.
 Seja específico aqui. Descreva como reproduzir o bug.
 
 ### Bugs Ativos
-- **ID:** 001
-  - **Descrição:** O jogador às vezes "agarra" em cantos de tiles ao se mover na diagonal.
-  - **Passos para Reproduzir:** 1. Mover o jogador contra um canto de tile. 2. Pressionar duas teclas de movimento (ex: W e A).
-  - **Prioridade:** Média.
+
 
 ### Bugs Corrigidos
 - **ID:** 000

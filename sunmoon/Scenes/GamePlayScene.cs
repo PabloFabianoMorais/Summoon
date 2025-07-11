@@ -17,6 +17,8 @@ namespace sunmoon.Scenes
     {
         public TilemapManager TilemapManager;
         private Camera _camera;
+        private TimeManager _timeManager;
+        private Color _overlayColor;
         private GameObject _player;
         public UIManager uiManager;
         private UIPanel _debugPanel;
@@ -37,6 +39,8 @@ namespace sunmoon.Scenes
 
             _camera = new Camera(graphicsDeviceService.GraphicsDevice.Viewport);
             _camera.Zoom = 3;
+
+            _timeManager = new TimeManager();
 
 
             GameObjectManager = new GameObjectManager();
@@ -71,6 +75,13 @@ namespace sunmoon.Scenes
 
             spriteBatch.End();
 
+            // Renderização de sobreposição de cor
+            spriteBatch.Begin();
+            var pixelTexture = GraphicsUtils.GetPixelTexture(spriteBatch.GraphicsDevice);
+            var screenRectangle = new Rectangle(0, 0, spriteBatch.GraphicsDevice.Viewport.Width, spriteBatch.GraphicsDevice.Viewport.Height);
+            spriteBatch.Draw(pixelTexture, screenRectangle, _overlayColor);
+            spriteBatch.End();
+
             // Renderização da interface gráfica
             spriteBatch.Begin();
 
@@ -92,6 +103,9 @@ namespace sunmoon.Scenes
                 }
             }
 
+            _timeManager.Update(gameTime);
+            UpdateOverlayColor();
+
             GameObjectManager.Update(gameTime);
 
             if (_player != null)
@@ -99,6 +113,8 @@ namespace sunmoon.Scenes
                 var playerTransform = _player.GetComponent<TransformComponent>();
                 _camera.Position = playerTransform.Position;
             }
+
+
 
             RequestChunksAroundCamera();
             TilemapManager.ProcessGeneratedChunks();
@@ -121,6 +137,35 @@ namespace sunmoon.Scenes
                         TilemapManager.RequestChunkGeneration(x, y);
                     }
                 }
+            }
+        }
+
+        private void UpdateOverlayColor()
+        {
+            Color dayColor = Color.Transparent;
+            Color duskColor = new Color(120, 60, 0, 50);
+            Color nightColor = new Color(0, 0, 50, 100);
+            Color dawnColor = new Color(130, 60, 20, 50);
+
+            switch (_timeManager.CurrentTimeOfDay)
+            {
+                case TimeOfDay.Day:
+                    float dayProgrss = (_timeManager.CurrentTime - 0.75f) / 0.10f;
+                    _overlayColor = Color.Lerp(dawnColor, dayColor, dayProgrss);
+                    _overlayColor = dayColor;
+                    break;
+                case TimeOfDay.Dusk:
+                    float duskProgress = (_timeManager.CurrentTime - 0.75f) / 0.10f;
+                    _overlayColor = Color.Lerp(dayColor, duskColor, duskProgress);
+                    break;
+                case TimeOfDay.Night:
+                    float nightProgress = (_timeManager.CurrentTime - 0.15f) / 0.10f;
+                    _overlayColor = Color.Lerp(duskColor, nightColor, nightProgress);
+                    break;
+                case TimeOfDay.Dawn:
+                    float dawnProgress = (_timeManager.CurrentTime - 0.15f) / 0.10f;
+                    _overlayColor = Color.Lerp(nightColor, dawnColor, dawnProgress);
+                    break;
             }
         }
     }
