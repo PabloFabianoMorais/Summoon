@@ -45,8 +45,8 @@ public class Game1 : Game
             Exit();
 
         InputManager.Update();
-        SceneManager.Update(gameTime);
         DebugService.Update(gameTime);
+        SceneManager.Update(gameTime);
 
         base.Update(gameTime);
     }

@@ -1,6 +1,10 @@
-
-using System;
+using System.Runtime.Serialization;
+using System.Threading;
+using System.Windows.Forms;
 using Microsoft.Xna.Framework;
+using SharpDX.Direct3D11;
+using sunmoon.Components;
+using sunmoon.Core.Management;
 
 namespace sunmoon.Core.Services
 {
@@ -9,11 +13,29 @@ namespace sunmoon.Core.Services
     /// </summary>
     public static class DebugService
     {
-        public static float Fps { get; set; }
+        public static float Fps { get; private set; }
         private const float FPS_UPDATE_INTERVAL = 1.0f;
 
         private static float _fpsTimer = 0f;
         private static int _frameCount = 0;
+        private static TimeManager _timeManager;
+        public static int DayCount;
+        public static float CurrentTime { get; set; }
+        private static TransformComponent _playerTransform { get; set; }
+        public static Vector2 PlayerPosition { get; set; }
+        private static GameObjectManager _gameObjectManager { get; set; }
+        public static int ObjectsCount { get; set; }
+        public static int RenderedObjects { get; set; }
+        private static TilemapManager _tilemapManager { get; set; }
+        public static int RenderedChunks { get; set; }
+
+        public static void Initialize(TimeManager timeManager, TransformComponent playerTransform, GameObjectManager gameObjectManager, TilemapManager tilemapManager)
+        {
+            _timeManager = timeManager;
+            _playerTransform = playerTransform;
+            _gameObjectManager = gameObjectManager;
+            _tilemapManager = tilemapManager;
+        }
 
         public static void Update(GameTime gameTime)
         {
@@ -27,6 +49,18 @@ namespace sunmoon.Core.Services
                 _fpsTimer = 0f;
                 _frameCount = 0;
             }
+
+            if (_timeManager != null)
+            {
+                DayCount = _timeManager.DayCount;
+                CurrentTime = _timeManager.CurrentTime;
+            }
+            if (_playerTransform != null)
+                PlayerPosition = _playerTransform.Position;
+            if (_gameObjectManager != null)
+                ObjectsCount = _gameObjectManager.GetObjectsCount();
+            if (_tilemapManager != null)
+                RenderedChunks = _tilemapManager.GetRenderedChunksCount();
         } 
     }
 }

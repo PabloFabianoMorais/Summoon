@@ -52,7 +52,8 @@ Funcionalidades maiores, em ordem aproximada de implementação.
 Use `[ ]` para tarefas a fazer e `[x]` para as concluídas.
 
 ### Prioridade Alta (Fazer Agora)
-- [ ] Implementar o sistema de tempo para o ciclo dia/noite.
+- [ ] Adicionar Origin Ás sprites
+- [X] Implementar o sistema de tempo para o ciclo dia/noite.
 - [ ] Criar o `HealthComponent` para o jogador.
 
 ### Prioridade Média (Fazer em Breve)
