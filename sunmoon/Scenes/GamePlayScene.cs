@@ -8,6 +8,8 @@ using sunmoon.Core.World;
 using System;
 using sunmoon.Components;
 using sunmoon.UI;
+using sunmoon.utils;
+
 
 namespace sunmoon.Scenes
 {
@@ -18,6 +20,7 @@ namespace sunmoon.Scenes
         private GameObject _player;
         public UIManager uiManager;
         private UIPanel _debugPanel;
+        private const int CHUNK_LOAD_RADIUS = 2;
 
 
         private TransformComponent _playerTransform;
@@ -31,14 +34,6 @@ namespace sunmoon.Scenes
 
             var worldGenerator = new WorldGenerator(0);
             TilemapManager = new TilemapManager(worldGenerator);
-
-            for (int y = -3; y <= 1; y++)
-            {
-                for (int x = -3; x <= 1; x++)
-                {
-                    TilemapManager.GenerateChunk(x, y);
-                }
-            }
 
             _camera = new Camera(graphicsDeviceService.GraphicsDevice.Viewport);
             _camera.Zoom = 3;
@@ -60,6 +55,7 @@ namespace sunmoon.Scenes
 
         public override void UnloadContent()
         {
+            TilemapManager?.StopGenerationThread();
         }
 
         public override void Draw(SpriteBatch spriteBatch)
@@ -104,8 +100,28 @@ namespace sunmoon.Scenes
                 _camera.Position = playerTransform.Position;
             }
 
+            RequestChunksAroundCamera();
+            TilemapManager.ProcessGeneratedChunks();
+
             uiManager.Update(gameTime);
 
+        }
+
+        private void RequestChunksAroundCamera()
+        {
+            int cameraChunkX = MathUtils.FloorDiv((int)_camera.Position.X, Chunk.CHUNK_WIDTH * TilemapManager.DEFAULT_TILE_SIZE);
+            int cameraChunkY = MathUtils.FloorDiv((int)_camera.Position.Y, Chunk.CHUNK_HEIGHT * TilemapManager.DEFAULT_TILE_SIZE);
+
+            for (int y = cameraChunkY - CHUNK_LOAD_RADIUS; y <= cameraChunkY + CHUNK_LOAD_RADIUS; y++)
+            {
+                for (int x = cameraChunkX - CHUNK_LOAD_RADIUS; x <= cameraChunkX + CHUNK_LOAD_RADIUS; x++)
+                {
+                    if (!TilemapManager.IsChunkRequestedOrExists(x, y))
+                    {
+                        TilemapManager.RequestChunkGeneration(x, y);
+                    }
+                }
+            }
         }
     }
 }

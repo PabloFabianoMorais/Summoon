@@ -1,4 +1,8 @@
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json.Linq;
@@ -18,42 +22,101 @@ namespace sunmoon.Core.Management
         private readonly Dictionary<Point, Chunk> _chunks = new Dictionary<Point, Chunk>();
         private readonly WorldGenerator _worldGenerator;
         private int _renderedChunksCount;
+        private readonly ConcurrentQueue<Point> _generationQueue = new ConcurrentQueue<Point>();
+        private readonly ConcurrentQueue<ChunkBluePrint> _generatedBluePrintsQueue = new ConcurrentQueue<ChunkBluePrint>();
+        private readonly ConcurrentDictionary<Point, bool> _requestedChunks = new ConcurrentDictionary<Point, bool>();
+        private Task _generationTask;
+        private CancellationTokenSource _cancellationTokenSource;
+
+        private ChunkBluePrint _currentBlueprintToBuild = null;
+        private int _buildCoordX = 0;
+        private int _buildCoordY = 0;
+        private const int TILES_TO_BUILD_PER_FRAME = 32;
 
         public TilemapManager(WorldGenerator worldGenerator)
         {
             _worldGenerator = worldGenerator;
+            StartGenerationThread();
         }
 
-        public int GetRenderedChunksCount()
+        private void StartGenerationThread()
         {
-            return _renderedChunksCount;
-        }
+            _cancellationTokenSource = new CancellationTokenSource();
+            var token = _cancellationTokenSource.Token;
 
-        public int GetTotalChunksCount()
-        {
-            return _chunks.Count;
-        }
-
-        public void GenerateChunk(int chunkX, int chunkY)
-        {
-            var chunkPosition = new Point(chunkX, chunkY);
-            if (_chunks.ContainsKey(chunkPosition))
-                return;
-
-            var newChunk = new Chunk(chunkPosition, DEFAULT_TILE_SIZE);
-            _chunks[chunkPosition] = newChunk;
-
-            for (int y = 0; y < Chunk.CHUNK_HEIGHT; y++)
+            _generationTask = Task.Run(() =>
             {
-                for (int x = 0; x < Chunk.CHUNK_WIDTH; x++)
+                while (!token.IsCancellationRequested)
                 {
-                    int worldX = (chunkX * Chunk.CHUNK_WIDTH) + x;
-                    int worldY = (chunkY * Chunk.CHUNK_HEIGHT) + y;
+                    if (_generationQueue.TryDequeue(out Point chunkPosition))
+                    {
+                        var newBluePrint = CreateChunkBluePrint(chunkPosition.X, chunkPosition.Y);
 
-                    TileType tileType = _worldGenerator.GetTileType(worldX, worldY);
-                    string prefabName = _worldGenerator.GetPrefabNameFor(tileType);
+                        _generatedBluePrintsQueue.Enqueue(newBluePrint);
+                    }
+                    else
+                    {
+                        Thread.Sleep(10);
+                    }
+                }
+            }, token);
+        }
 
-                    var tilePosition = new Vector2(worldX * DEFAULT_TILE_SIZE, worldY * DEFAULT_TILE_SIZE);
+        /// <summary>
+        /// Pede para um chunk ser gerado, adicionando-o à fila de geração.
+        /// </summary>
+        public void RequestChunkGeneration(int chunkX, int chunkY)
+        {
+            var chunkPos = new Point(chunkX, chunkY);
+
+            if (_requestedChunks.TryAdd(chunkPos, true))
+            {
+                _generationQueue.Enqueue(new Point(chunkX, chunkY));
+            }
+        }
+
+        public bool IsChunkRequestedOrExists(int chunkX, int chunkY)
+        {
+            var chunkPos = new Point(chunkX, chunkY);
+            return _chunks.ContainsKey(chunkPos) || _requestedChunks.ContainsKey(chunkPos);
+        }
+
+        /// <summary>
+        /// Processa os chunks que foram gerados no thread em segundo plano e os adiciona ao mundo.
+        /// Deve ser chamado no thread principal (Update)
+        /// </summary>
+        public void ProcessGeneratedChunks()
+        {
+            if (_currentBlueprintToBuild == null)
+            {
+                if (!_generatedBluePrintsQueue.TryDequeue(out _currentBlueprintToBuild))
+                    return;
+
+                var newChunk = new Chunk(_currentBlueprintToBuild.ChunkPosition, DEFAULT_TILE_SIZE);
+                _chunks[_currentBlueprintToBuild.ChunkPosition] = newChunk;
+                _buildCoordX = 0;
+                _buildCoordY = 0;
+            }
+
+            var chunkBeingBuilt = _chunks[_currentBlueprintToBuild.ChunkPosition];
+            for (int i = 0; i <= TILES_TO_BUILD_PER_FRAME; i++)
+            {
+                if (_buildCoordY >= Chunk.CHUNK_HEIGHT)
+                {
+                    _currentBlueprintToBuild = null;
+                    return;
+                }
+
+                TileData tileData = _currentBlueprintToBuild.Tiles[_buildCoordX, _buildCoordY];
+
+                if (!string.IsNullOrEmpty(tileData.PrefabName))
+                {
+
+                    var tilePosition = new Vector2(
+                        (_currentBlueprintToBuild.ChunkPosition.X * Chunk.CHUNK_WIDTH + _buildCoordX) * DEFAULT_TILE_SIZE,
+                        (_currentBlueprintToBuild.ChunkPosition.Y * Chunk.CHUNK_HEIGHT + _buildCoordY) * DEFAULT_TILE_SIZE
+                    );
+
                     var overrides = new JObject
                     {
                         ["components"] = new JObject
@@ -69,10 +132,71 @@ namespace sunmoon.Core.Management
                         }
                     };
 
-                    GameObject tileObject = GameObjectFactory.Create(prefabName, overrides);
-                    newChunk.SetTile(x, y, tileObject);
+                    GameObject tileObject = GameObjectFactory.Create(tileData.PrefabName, overrides);
+                    chunkBeingBuilt.SetTile(_buildCoordX, _buildCoordY, tileObject);
+                }
+                _buildCoordX++;
+                if (_buildCoordX >= Chunk.CHUNK_WIDTH)
+                {
+                    _buildCoordX = 0;
+                    _buildCoordY++;
                 }
             }
+        }
+
+        /// <summary>
+        /// Verifica se o chunk nas coordenadas de chunks especificadas já foi gerado.
+        /// </summary>
+        /// <param name="chunkX">Posição X nas coordenadas de chunk.</param>
+        /// <param name="chunkY">Posição Y nas coordenadas de chunk.</param>
+        /// <returns>True se chunk existe, senão false.</returns>
+        public bool HasChunk(int chunkX, int chunkY)
+        {
+            return _chunks.ContainsKey(new Point(chunkX, chunkY));
+        }
+
+        public int GetRenderedChunksCount()
+        {
+            return _renderedChunksCount;
+        }
+
+        public int GetTotalChunksCount()
+        {
+            return _chunks.Count;
+        }
+
+        /// <summary>
+        /// Lógica de geração de um único chunk. Esta é a função que roda no thread secundário
+        /// </summary>
+        private ChunkBluePrint CreateChunkBluePrint(int chunkX, int chunkY)
+        {
+            var chunkPosition = new Point(chunkX, chunkY);
+            var newBluePrint = new ChunkBluePrint(chunkPosition);
+
+            for (int y = 0; y < Chunk.CHUNK_HEIGHT; y++)
+            {
+                for (int x = 0; x < Chunk.CHUNK_WIDTH; x++)
+                {
+                    int worldX = (chunkX * Chunk.CHUNK_WIDTH) + x;
+                    int worldY = (chunkY * Chunk.CHUNK_HEIGHT) + y;
+
+                    TileType tileType = _worldGenerator.GetTileType(worldX, worldY);
+                    string prefabName = _worldGenerator.GetPrefabNameFor(tileType);
+
+                    newBluePrint.Tiles[x, y] = new TileData { PrefabName = prefabName };
+                }
+            }
+
+            return newBluePrint;
+        }
+
+        /// <summary>
+        /// Para a tarefa de geração de forma segura
+        /// </summary>
+        public void StopGenerationThread()
+        {
+            _cancellationTokenSource?.Cancel();
+            _generationTask?.Wait();
         }
 
         public void Draw(SpriteBatch spriteBatch, Camera camera)
