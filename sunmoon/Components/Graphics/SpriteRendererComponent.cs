@@ -1,10 +1,10 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
-using sunmoon.Core;
 using sunmoon.Core.ECS;
+using sunmoon.Components.Core;
 
-namespace sunmoon.Components
+namespace sunmoon.Components.Graphics
 {
     public class SpriteRendererComponent : Component, IDrawableComponent, IContentLoadable
     {

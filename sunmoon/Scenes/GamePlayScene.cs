@@ -6,7 +6,7 @@ using sunmoon.Core.Factory;
 using sunmoon.Core.ECS;
 using sunmoon.Core.World;
 using System;
-using sunmoon.Components;
+using sunmoon.Components.Core;
 using sunmoon.UI;
 using sunmoon.utils;
 using sunmoon.Core.Services;

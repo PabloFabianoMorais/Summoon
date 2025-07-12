@@ -1,8 +1,7 @@
-using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using sunmoon.Components;
+using sunmoon.Components.Core;
 using sunmoon.Core.ECS;
 using sunmoon.Core.World;
 

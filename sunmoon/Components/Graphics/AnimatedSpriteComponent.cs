@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
@@ -6,8 +5,9 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using sunmoon.Core.ECS;
 using sunmoon.Core.Graphics;
+using sunmoon.Components.Core;
 
-namespace sunmoon.Components.Common
+namespace sunmoon.Components.Graphics
 {
     public class AnimatedSpriteComponent : Component, IUpdatableComponent, IDrawableComponent, IContentLoadable
     {

@@ -15,11 +15,20 @@
             "Animations": {
                 "Idle": {
                     "Name": "Idle",
-                    "TexturePath": "Textures/Characters/base",
+                    "TexturePath": "Textures/Characters/Player/Base",
                     "FrameWidth": 16,
                     "FrameHeight": 16,
                     "FrameCount": 2,
                     "FrameDuration": 0.5,
+                    "IsLooping": true
+                },
+                "Running": {
+                    "Name": "Running",
+                    "TexturePath": "Textures/Characters/Player/BaseRunning",
+                    "FrameWidth": 16,
+                    "FrameHeight": 16,
+                    "FrameDuration": 0.1,
+                    "FrameCount": 4,
                     "IsLooping": true
                 }
             }

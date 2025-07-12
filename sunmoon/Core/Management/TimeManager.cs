@@ -57,7 +57,6 @@ namespace sunmoon.Core.Management
             if (previousTimeOfDay != CurrentTimeOfDay)
             {
                 OnTimeOfDayChanged?.Invoke(CurrentTimeOfDay);
-                Console.WriteLine($"A new day has begun: It's {CurrentTimeOfDay}");
             }
 
         }

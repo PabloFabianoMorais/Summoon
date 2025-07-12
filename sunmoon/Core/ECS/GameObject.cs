@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using sunmoon.Components;
-using sunmoon.Components.Common;
+using sunmoon.Components.Graphics;
+using sunmoon.Components.Core;
 
 
 namespace sunmoon.Core.ECS

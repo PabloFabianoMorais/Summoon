@@ -28,9 +28,9 @@ Funcionalidades maiores, em ordem aproximada de implementação.
     - [X] Transição de estado Dia <-> Noite.
 - [ ] **Sistema de inventário**
     - [ ] Áreas de gerenciamento de itens.
-    - [ ] 2 Espaços de item para segura-los na mão para utiliza-lo se forem utilizáveis, como armas.
-    - [ ] 3 Espaços para itens de armadura.
-    - [ ] 1 Espaço para itens de mochila.
+    - [ ] No jogador, 2 Espaços de item para segura-los na mão esquerda e direita podendo utiliza-los.
+    - [ ] No jogador, 3 Espaços para itens de armadura.
+    - [ ] No jogador, 1 Espaço para itens de mochila.
     - [ ] Sistema de peso de itens.
 - [ ] **Sistema de Combate:**
     - [ ] Componente de Vida (HealthComponent).

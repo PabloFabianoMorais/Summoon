@@ -1,7 +1,7 @@
 using Microsoft.Xna.Framework;
 using sunmoon.Core.ECS;
 
-namespace sunmoon.Components
+namespace sunmoon.Components.Core
 {
     public class TransformComponent : Component, IUpdatableComponent
     {

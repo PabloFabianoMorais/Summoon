@@ -1,10 +1,6 @@
-using System.Runtime.Serialization;
-using System.Threading;
-using System.Windows.Forms;
 using Microsoft.Xna.Framework;
-using SharpDX.Direct3D11;
-using sunmoon.Components;
 using sunmoon.Core.Management;
+using sunmoon.Components.Core;
 
 namespace sunmoon.Core.Services
 {
@@ -58,7 +54,10 @@ namespace sunmoon.Core.Services
             if (_playerTransform != null)
                 PlayerPosition = _playerTransform.Position;
             if (_gameObjectManager != null)
+            {
                 ObjectsCount = _gameObjectManager.GetObjectsCount();
+                RenderedObjects = _gameObjectManager.GetRenderedObjectsCount();
+            }
             if (_tilemapManager != null)
                 RenderedChunks = _tilemapManager.GetRenderedChunksCount();
         } 

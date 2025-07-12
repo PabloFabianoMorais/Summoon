@@ -1,7 +1,7 @@
 
 using sunmoon.Core.ECS;
 
-namespace sunmoon.Components
+namespace sunmoon.Components.Core
 {
     public class EntityComponent : Component
     {

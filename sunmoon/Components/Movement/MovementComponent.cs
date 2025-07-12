@@ -1,8 +1,8 @@
 using Microsoft.Xna.Framework;
-using sunmoon.Core;
 using sunmoon.Core.ECS;
+using sunmoon.Components.Core;
 
-namespace sunmoon.Components
+namespace sunmoon.Components.Movement
 {
     public class MovementComponent : Component, IUpdatableComponent
     {
@@ -10,7 +10,6 @@ namespace sunmoon.Components
 
         public Vector2 Velocity = new Vector2(0, 0);
         public float MovementSpeed = 0f;
-
         public override void Initialize()
         {
             _transformComponent = GameObject?.GetComponent<TransformComponent>();
