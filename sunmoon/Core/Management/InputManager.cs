@@ -24,6 +24,7 @@ namespace sunmoon.Core.Management
             _keyMappings["MoveLeft"] = Keys.A;
             _keyMappings["MoveRight"] = Keys.D;
             _keyMappings["ToggleDebug"] = Keys.P;
+            _keyMappings["ToggleInventory"] = Keys.E;
             _keyMappings["ReloadMap"] = Keys.R;
         }
 

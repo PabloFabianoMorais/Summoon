@@ -1,6 +1,11 @@
 {
-    "inherits": "_BaseEntity",
+    "inherits": "_BaseItem",
     "components": {
+        "ItemComponent": {
+            "Name": "Noodles Glove",
+            "ItemType": "Weapon",
+            "EquipmentSlot": "Hand"
+        },
         "SpriteRendererComponent": {
             "TexturePath": "Textures/Items/NoodlesGlove"
         }

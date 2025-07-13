@@ -12,7 +12,7 @@ namespace sunmoon.Core.Serialization
     {
         /// Carrega o arquivo JSON e converte a estrutura de posição do prefab
         /// para Vector2
-        public override Vector2 ReadJson(JsonReader reader, Type objectType, Vector2 existingValue, bool hasExistingvalue, JsonSerializer jsonSerializer)
+        public override Vector2 ReadJson(JsonReader reader, Type objectType, Vector2 existingValue, bool hasExistingValue, JsonSerializer jsonSerializer)
         {
             if (reader.TokenType == JsonToken.Null)
             {
@@ -27,14 +27,16 @@ namespace sunmoon.Core.Serialization
         }
 
         /// Converte valor Vector2 para estrutura de posição prefab.
-        public override void WriteJson(JsonWriter writer, Vector2 value, JsonSerializer serializer)
+        public override void  WriteJson(JsonWriter writer, Vector2 value, JsonSerializer serializer)
         {
-            JObject obj = new JObject
-            {
-                {"X", value.X},
-                {"Y", value.Y}
-            };
-            obj.WriteTo(writer);
+            writer.WriteStartObject();
+
+            writer.WritePropertyName("X");
+            writer.WriteValue(value.X);
+            writer.WritePropertyName("Y");
+            writer.WriteValue(value.Y);
+
+            writer.WriteEndObject();
         }
     }
 }

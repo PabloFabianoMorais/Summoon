@@ -14,6 +14,8 @@ namespace sunmoon.Components.Graphics
         public Dictionary<string, Animation> Animations { get; set; } = new Dictionary<string, Animation>();
         public string CurrentAnimationName { get; set; }
         public Color Color { get; set; } = Color.White;
+        public Vector2 Origin { get; set; } = Vector2.Zero;
+        public bool AutoCenterOrigin { get; set; } = false;
         public SpriteEffects SpriteEffects { get; set; } = SpriteEffects.None;
         public float LayerDepth { get; set; } = 0f;
 
@@ -81,13 +83,18 @@ namespace sunmoon.Components.Graphics
                 _currentAnimation.FrameHeight
             );
 
+            var originToUse = this.Origin;
+
+            if (this.AutoCenterOrigin)
+                originToUse = new Vector2(sourceRect.Width / 2f, sourceRect.Height / 2);
+
             spriteBatch.Draw(
                 texture: _currentAnimation.Texture,
                 position: _transformComponent.Position,
                 sourceRectangle: sourceRect,
                 color: this.Color,
                 rotation: _transformComponent.Rotation,
-                origin: Vector2.Zero,
+                origin: originToUse,
                 scale: _transformComponent.Scale,
                 effects: this.SpriteEffects,
                 layerDepth: this.LayerDepth

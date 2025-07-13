@@ -8,9 +8,8 @@
         "MovementComponent": {
             "MovementSpeed": 200.0
         },
-        "PlayerInputComponent": {
-            
-        },
+        "PlayerInputComponent": {},
+        "EquipmentComponent": {},
         "AnimatedSpriteComponent": {
             "Animations": {
                 "Idle": {
@@ -31,7 +30,8 @@
                     "FrameCount": 4,
                     "IsLooping": true
                 }
-            }
+            },
+            "AutoCenterOrigin": true
         }
     }
 }

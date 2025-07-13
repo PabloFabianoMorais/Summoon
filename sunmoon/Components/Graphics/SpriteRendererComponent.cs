@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using sunmoon.Core.ECS;
 using sunmoon.Components.Core;
+using sunmoon.utils;
 
 namespace sunmoon.Components.Graphics
 {
@@ -16,6 +17,7 @@ namespace sunmoon.Components.Graphics
         public Rectangle? SourceRectangle { get; set; } = null;
         public Color Color { get; set; } = Color.White;
         public Vector2 Origin { get; set; } = Vector2.Zero;
+        public bool AutoCenterOrigin { get; set; } = false;
         public SpriteEffects SpriteEffects { get; set; } = SpriteEffects.None;
         public float LayerDepth { get; set; } = 0f;
 
@@ -35,13 +37,18 @@ namespace sunmoon.Components.Graphics
 
         public void Draw(SpriteBatch spriteBatch)
         {
+            var originToUse = this.Origin;
+            if (this.AutoCenterOrigin)
+                originToUse = new Vector2(this.Texture.Width / 2f, this.Texture.Height / 2f);
+
+
             spriteBatch.Draw(
                 texture: this.Texture,
                 position: this._transformComponent.Position,
                 sourceRectangle: this.SourceRectangle,
                 color: this.Color,
                 rotation: _transformComponent.Rotation,
-                origin: this.Origin,
+                origin: originToUse,
                 scale: _transformComponent.Scale,
                 effects: this.SpriteEffects,
                 layerDepth: this.LayerDepth

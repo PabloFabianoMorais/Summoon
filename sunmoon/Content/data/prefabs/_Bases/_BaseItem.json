@@ -1,0 +1,14 @@
+{
+    "isAbstract": true,
+    "components": {
+        "TagsComponent": {
+            "Tags": ["Entity", "Item"]
+        },
+        "ItemComponent": { 
+            "Name": "Item",
+            "Weight": 1.0,
+            "ItemType": "Misc",
+            "EquipmentSlot": "None"
+        }
+    }
+}

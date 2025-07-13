@@ -10,6 +10,8 @@ using sunmoon.Components.Core;
 using sunmoon.UI;
 using sunmoon.utils;
 using sunmoon.Core.Services;
+using sunmoon.Components.Items;
+using System.Runtime.Serialization;
 
 
 namespace sunmoon.Scenes
@@ -22,6 +24,7 @@ namespace sunmoon.Scenes
         private GameObject _player;
         public UIManager uiManager;
         private UIPanel _debugPanel;
+        private UIPanel _inventoryPanel;
         private const int CHUNK_LOAD_RADIUS = 2;
 
 
@@ -47,6 +50,9 @@ namespace sunmoon.Scenes
 
             _player = GameObjectFactory.Create("Player");
             _playerTransform = _player.GetComponent<TransformComponent>();
+            var playerEquipment = _player.GetComponent<EquipmentComponent>();
+            playerEquipment.EquipItem(GameObjectFactory.Create("NoodlesGlove"));
+            Console.WriteLine(playerEquipment.LeftHand);
             GameObjectManager.Add(_player);
 
             uiManager = new UIManager();
@@ -54,8 +60,12 @@ namespace sunmoon.Scenes
             var font = content.Load<SpriteFont>("Fonts/DebugFont");
 
             DebugService.Initialize(_timeManager, _playerTransform, GameObjectManager, TilemapManager);
+
             _debugPanel = new DebugPanel(font);
+            _inventoryPanel = new PlayerEquipmentPanel(font, playerEquipment);
+
             uiManager.AddElement(_debugPanel);
+            uiManager.AddElement(_inventoryPanel);
         }
 
         public override void UnloadContent()
@@ -91,9 +101,18 @@ namespace sunmoon.Scenes
             {
                 if (_debugPanel.IsVisible)
                     _debugPanel.IsVisible = false;
-                else if (!_debugPanel.IsVisible)
+                else
                 {
                     _debugPanel.IsVisible = true;
+                }
+            }
+            if (InputManager.IsActionPressed("ToggleInventory"))
+            {
+                if (_inventoryPanel.IsVisible)
+                    _inventoryPanel.IsVisible = false;
+                else
+                {
+                    _inventoryPanel.IsVisible = true;
                 }
             }
 
