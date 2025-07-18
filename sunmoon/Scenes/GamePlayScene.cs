@@ -11,7 +11,6 @@ using sunmoon.UI;
 using sunmoon.utils;
 using sunmoon.Core.Services;
 using sunmoon.Components.Items;
-using System.Runtime.Serialization;
 using sunmoon.Components.Combat;
 
 
@@ -29,6 +28,7 @@ namespace sunmoon.Scenes
         private UIPanel _debugPanel;
         private UIPanel _inventoryPanel;
         private const int CHUNK_LOAD_RADIUS = 2;
+        private const int CHUNK_UNLOAD_RADIUS = 4;
 
 
 
@@ -134,6 +134,7 @@ namespace sunmoon.Scenes
 
 
             RequestChunksAroundCamera();
+            ManageChunkLifetime();
             TilemapManager.ProcessGeneratedChunks();
 
             uiManager.Update(gameTime);
@@ -155,6 +156,14 @@ namespace sunmoon.Scenes
                     }
                 }
             }
+        }
+
+        private void ManageChunkLifetime()
+        {
+            int cameraChunkX = MathUtils.FloorDiv((int)_camera.Position.X, Chunk.CHUNK_WIDTH * TilemapManager.DEFAULT_TILE_SIZE);
+            int cameraChunkY = MathUtils.FloorDiv((int)_camera.Position.Y, Chunk.CHUNK_HEIGHT * TilemapManager.DEFAULT_TILE_SIZE);
+
+            TilemapManager.UnloadDistantChunks(cameraChunkX, cameraChunkY, CHUNK_UNLOAD_RADIUS);
         }
     }
 }

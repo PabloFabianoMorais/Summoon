@@ -1,15 +1,13 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using sunmoon.Core.ECS;
 using sunmoon.Core.Factory;
-using sunmoon.Core.Serialization;
 using sunmoon.Core.World;
 
 namespace sunmoon.Core.Management
@@ -34,6 +32,8 @@ namespace sunmoon.Core.Management
         private int _buildCoordX = 0;
         private int _buildCoordY = 0;
         private const int TILES_TO_BUILD_PER_FRAME = 32;
+
+        private JObject _tileOverrides = new JObject { ["components"] = new JObject { ["TransformComponent"] = new JObject { ["Position"] = new JObject() } } };
 
         public TilemapManager(WorldGenerator worldGenerator)
         {
@@ -101,6 +101,8 @@ namespace sunmoon.Core.Management
             }
 
             var chunkBeingBuilt = _chunks[_currentBlueprintToBuild.ChunkPosition];
+            var positionJson = (JObject)_tileOverrides["components"]["TransformComponent"]["Position"];
+
             for (int i = 0; i <= TILES_TO_BUILD_PER_FRAME; i++)
             {
                 if (_buildCoordY >= Chunk.CHUNK_HEIGHT)
@@ -119,22 +121,10 @@ namespace sunmoon.Core.Management
                         (_currentBlueprintToBuild.ChunkPosition.Y * Chunk.CHUNK_HEIGHT + _buildCoordY) * DEFAULT_TILE_SIZE
                     );
 
-                    var overrides = new JObject
-                    {
-                        ["components"] = new JObject
-                        {
-                            ["TransformComponent"] = new JObject
-                            {
-                                ["Position"] = new JObject
-                                {
-                                    ["X"] = tilePosition.X,
-                                    ["Y"] = tilePosition.Y
-                                }
-                            }
-                        }
-                    };
+                    positionJson["X"] = tilePosition.X;
+                    positionJson["Y"] = tilePosition.Y;
 
-                    GameObject tileObject = GameObjectFactory.Create(tileData.PrefabName, overrides);
+                    GameObject tileObject = GameObjectFactory.Create(tileData.PrefabName, _tileOverrides);
                     chunkBeingBuilt.SetTile(_buildCoordX, _buildCoordY, tileObject);
                 }
                 _buildCoordX++;
@@ -142,6 +132,28 @@ namespace sunmoon.Core.Management
                 {
                     _buildCoordX = 0;
                     _buildCoordY++;
+                }
+            }
+        }
+
+        public void UnloadDistantChunks(int centerChunkX, int centerChunkY, int unloadRadius)
+        {
+            var chunksToRemove = new List<Point>();
+
+            foreach (var chunkPos in _chunks.Keys)
+            {
+                int dist_x = Math.Abs(chunkPos.X - centerChunkX);
+                int dist_y = Math.Abs(chunkPos.Y - centerChunkY);
+
+                if (dist_x > unloadRadius || dist_y > unloadRadius)
+                {
+                    chunksToRemove.Add(chunkPos);
+                }
+
+                foreach (var pos in chunksToRemove)
+                {
+                    _chunks.Remove(pos);
+                    _requestedChunks.TryRemove(pos, out _);
                 }
             }
         }
@@ -182,9 +194,7 @@ namespace sunmoon.Core.Management
                     int worldX = (chunkX * Chunk.CHUNK_WIDTH) + x;
                     int worldY = (chunkY * Chunk.CHUNK_HEIGHT) + y;
 
-                    TileType tileType = _worldGenerator.GetTileType(worldX, worldY);
-                    string prefabName = _worldGenerator.GetPrefabNameFor(tileType);
-
+                    string prefabName = _worldGenerator.GetTilePrefabName(worldX, worldY);
                     newBluePrint.Tiles[x, y] = new TileData { PrefabName = prefabName };
                 }
             }

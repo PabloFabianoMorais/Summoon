@@ -1,6 +1,5 @@
 
 using Microsoft.Xna.Framework;
-using SharpDX.Direct3D11;
 
 namespace sunmoon.Core.World
 {
