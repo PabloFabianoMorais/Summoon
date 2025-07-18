@@ -13,6 +13,7 @@ namespace sunmoon.UI
             var dayCountLabel = new UILabel(font, () => $"Dia: {DebugService.DayCount}", Vector2.Zero, Color.White);
             var currentTimeLabel = new UILabel(font, () => $"Horário: {DebugService.CurrentTime:F2}", Vector2.Zero, Color.White);
             var playerPosLabel = new UILabel(font, () => $"Position: X={DebugService.PlayerPosition.X:F0}, Y={DebugService.PlayerPosition.Y:F0}", Vector2.Zero, Color.White);
+            var playerHealthLabel = new UILabel(font, () => $"Vida: {DebugService.PlayerCurrentHealth:F2}", Vector2.Zero, Color.White);
             var fpsLabel = new UILabel(font, () => $"FPS: {DebugService.Fps:F0}", Vector2.Zero, Color.White);
             var objectCountLabel = new UILabel(font, () => $"Objetos: {DebugService.ObjectsCount}", Vector2.Zero, Color.White);
             var renderedObjectsLabel = new UILabel(font, () => $"Objetos renderizados: {DebugService.RenderedObjects}", Vector2.Zero, Color.White);
@@ -21,6 +22,7 @@ namespace sunmoon.UI
             stackPanel.AddChild(dayCountLabel);
             stackPanel.AddChild(currentTimeLabel);
             stackPanel.AddChild(playerPosLabel);
+            stackPanel.AddChild(playerHealthLabel);
             stackPanel.AddChild(fpsLabel);
             stackPanel.AddChild(objectCountLabel);
             stackPanel.AddChild(renderedObjectsLabel);

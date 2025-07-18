@@ -1,6 +1,8 @@
 using Microsoft.Xna.Framework;
 using sunmoon.Core.Management;
 using sunmoon.Components.Core;
+using sunmoon.Core.ECS;
+using sunmoon.Components.Combat;
 
 namespace sunmoon.Core.Services
 {
@@ -19,16 +21,25 @@ namespace sunmoon.Core.Services
         public static float CurrentTime { get; set; }
         private static TransformComponent _playerTransform { get; set; }
         public static Vector2 PlayerPosition { get; set; }
+        public static HealthComponent _playerHealth { get; set; }
+        public static float PlayerCurrentHealth { get; set; }
         private static GameObjectManager _gameObjectManager { get; set; }
         public static int ObjectsCount { get; set; }
         public static int RenderedObjects { get; set; }
         private static TilemapManager _tilemapManager { get; set; }
         public static int RenderedChunks { get; set; }
 
-        public static void Initialize(TimeManager timeManager, TransformComponent playerTransform, GameObjectManager gameObjectManager, TilemapManager tilemapManager)
+        public static void Initialize(
+            TimeManager timeManager,
+            TransformComponent playerTransform,
+            HealthComponent healthComponent,
+            GameObjectManager gameObjectManager,
+            TilemapManager tilemapManager
+        )
         {
             _timeManager = timeManager;
             _playerTransform = playerTransform;
+            _playerHealth = healthComponent;
             _gameObjectManager = gameObjectManager;
             _tilemapManager = tilemapManager;
         }
@@ -53,11 +64,13 @@ namespace sunmoon.Core.Services
             }
             if (_playerTransform != null)
                 PlayerPosition = _playerTransform.Position;
+            if (_playerHealth != null)
+                PlayerCurrentHealth = _playerHealth.CurrentHealth;
             if (_gameObjectManager != null)
-            {
-                ObjectsCount = _gameObjectManager.GetObjectsCount();
-                RenderedObjects = _gameObjectManager.GetRenderedObjectsCount();
-            }
+                {
+                    ObjectsCount = _gameObjectManager.GetObjectsCount();
+                    RenderedObjects = _gameObjectManager.GetRenderedObjectsCount();
+                }
             if (_tilemapManager != null)
                 RenderedChunks = _tilemapManager.GetRenderedChunksCount();
         } 

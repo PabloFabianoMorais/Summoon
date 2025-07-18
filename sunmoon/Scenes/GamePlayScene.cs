@@ -12,6 +12,7 @@ using sunmoon.utils;
 using sunmoon.Core.Services;
 using sunmoon.Components.Items;
 using System.Runtime.Serialization;
+using sunmoon.Components.Combat;
 
 
 namespace sunmoon.Scenes
@@ -22,13 +23,14 @@ namespace sunmoon.Scenes
         private Camera _camera;
         private TimeManager _timeManager;
         private GameObject _player;
+        private TransformComponent _playerTransform;
+        private HealthComponent _playerHealth;
         public UIManager uiManager;
         private UIPanel _debugPanel;
         private UIPanel _inventoryPanel;
         private const int CHUNK_LOAD_RADIUS = 2;
 
 
-        private TransformComponent _playerTransform;
 
         public override void LoadContent(ContentManager content)
         {
@@ -50,6 +52,7 @@ namespace sunmoon.Scenes
 
             _player = GameObjectFactory.Create("Player");
             _playerTransform = _player.GetComponent<TransformComponent>();
+            _playerHealth = _player.GetComponent<HealthComponent>();
             var playerEquipment = _player.GetComponent<EquipmentComponent>();
             playerEquipment.EquipItem(GameObjectFactory.Create("NoodlesGlove"));
             Console.WriteLine(playerEquipment.LeftHand);
@@ -59,7 +62,7 @@ namespace sunmoon.Scenes
 
             var font = content.Load<SpriteFont>("Fonts/DebugFont");
 
-            DebugService.Initialize(_timeManager, _playerTransform, GameObjectManager, TilemapManager);
+            DebugService.Initialize(_timeManager, _playerTransform, _playerHealth, GameObjectManager, TilemapManager);
 
             _debugPanel = new DebugPanel(font);
             _inventoryPanel = new PlayerEquipmentPanel(font, playerEquipment);
@@ -115,6 +118,8 @@ namespace sunmoon.Scenes
                     _inventoryPanel.IsVisible = true;
                 }
             }
+
+            if (InputManager.IsActionPressed("TakeDemage")) _playerHealth.TakeDemage(10);
 
             _timeManager.Update(gameTime);
 

@@ -8,6 +8,9 @@
         "MovementComponent": {
             "MovementSpeed": 200.0
         },
+        "HealthComponent": {
+            "MaxHealth": 100
+        },
         "PlayerInputComponent": {},
         "EquipmentComponent": {},
         "AnimatedSpriteComponent": {

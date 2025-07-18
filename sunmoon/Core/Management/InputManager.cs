@@ -26,6 +26,7 @@ namespace sunmoon.Core.Management
             _keyMappings["ToggleDebug"] = Keys.P;
             _keyMappings["ToggleInventory"] = Keys.E;
             _keyMappings["ReloadMap"] = Keys.R;
+            _keyMappings["TakeDemage"] = Keys.T;
         }
 
         public static void Update()

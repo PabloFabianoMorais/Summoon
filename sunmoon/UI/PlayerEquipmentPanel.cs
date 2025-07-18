@@ -1,5 +1,4 @@
 
-using System.Linq.Expressions;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using sunmoon.Components.Items;
@@ -15,15 +14,8 @@ namespace sunmoon.UI
             var rightHand = equipmentComponent.RightHand;
             var leftHand = equipmentComponent.LeftHand;
 
-            string rightHandText;
-            if (rightHand != null) rightHandText = $"Mão direita: {rightHand.GetComponent<ItemComponent>().Name}";
-            else rightHandText = $"Mão direita: Nada";
-            string leftHandText;
-            if (leftHand != null) leftHandText = $"Mão esquerda: {leftHand.GetComponent<ItemComponent>().Name}";
-            else leftHandText = $"Mão esquerda: Nada";
-
-            var rightHandLabel = new UILabel(font, () => rightHandText, Vector2.Zero, Color.White);
-            var leftHandLabel = new UILabel(font, () => leftHandText, Vector2.Zero, Color.White);
+            var rightHandLabel = new UILabel(font, () => $"Mão direita: {equipmentComponent.RightHand?.GetComponent<ItemComponent>().Name}", Vector2.Zero, Color.White);
+            var leftHandLabel = new UILabel(font, () => $"Mão esquerda: {equipmentComponent.LeftHand?.GetComponent<ItemComponent>().Name}", Vector2.Zero, Color.White);
 
 
             stackPanel.AddChild(rightHandLabel);
