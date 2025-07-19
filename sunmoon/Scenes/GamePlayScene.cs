@@ -124,6 +124,7 @@ namespace sunmoon.Scenes
             _timeManager.Update(gameTime);
 
             GameObjectManager.Update(gameTime);
+            TilemapManager.Update(gameTime);
 
             if (_player != null)
             {

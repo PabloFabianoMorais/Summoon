@@ -5,9 +5,6 @@
         },
         "TransformComponent": {
             "Scale": {"X": 1, "Y": 1}
-        },
-        "SpriteRendererComponent": {
-            "LayerDepth": 0.0
         }
     }
 }

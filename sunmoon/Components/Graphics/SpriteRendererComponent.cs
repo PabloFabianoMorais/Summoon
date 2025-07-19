@@ -37,6 +37,8 @@ namespace sunmoon.Components.Graphics
 
         public void Draw(SpriteBatch spriteBatch)
         {
+            if (Texture == null) return;
+            
             var originToUse = this.Origin;
             if (this.AutoCenterOrigin)
                 originToUse = new Vector2(this.Texture.Width / 2f, this.Texture.Height / 2f);

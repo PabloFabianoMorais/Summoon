@@ -5,7 +5,9 @@ Use `[ ]` para tarefas a fazer e `[x]` para as concluídas.
 ### Prioridade Alta (Fazer Agora)
 - [X] Adicionar Origin Ás sprites
 - [X] Implementar o sistema de tempo para o ciclo dia/noite.
-- [ ] Criar o `HealthComponent` para o jogador.
+- [X] Criar o `HealthComponent` para o jogador.
+- [ ] Sincronia de animações.
+- [ ] Geração de props (objetos estático sobre o mundo) procedural.
 
 ### Prioridade Média (Fazer em Breve)
 - [ ] Adicionar mais tipos de tiles e biomas ao `WorldGenerator`.

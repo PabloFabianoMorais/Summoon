@@ -22,7 +22,6 @@ namespace sunmoon.Components.Graphics
         private TransformComponent _transformComponent;
         private Animation _currentAnimation;
         private int _currentFrameIndex;
-        private float _timer;
 
         public override void Initialize()
         {
@@ -52,23 +51,12 @@ namespace sunmoon.Components.Graphics
         {
             if (_currentAnimation == null) return;
 
-            _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            if (_timer >= _currentAnimation.FrameDuration)
+            if (_currentAnimation.FrameDuration > 0)
             {
-                _timer -= _currentAnimation.FrameDuration;
-                _currentFrameIndex++;
+                float totalLoopDuration = _currentAnimation.FrameCount * _currentAnimation.FrameDuration;
+                float timeInCurrentLoop = (float)gameTime.TotalGameTime.TotalSeconds % totalLoopDuration;
 
-                if (_currentFrameIndex >= _currentAnimation.FrameCount)
-                {
-                    // Se a animação não deve repetir, nós a "congelamos" no último frame
-                    // Decrementando o índice de volta para o valor máximo válido.
-                    _currentFrameIndex = 0;
-                }
-                else if (!_currentAnimation.IsLooping)
-                {
-                    _currentFrameIndex = _currentFrameIndex - 1;
-                }
+                _currentFrameIndex = (int)(timeInCurrentLoop / _currentAnimation.FrameDuration);
             }
         }
 
@@ -110,7 +98,6 @@ namespace sunmoon.Components.Graphics
             _currentAnimation = Animations[animationName];
             CurrentAnimationName = animationName;
             _currentFrameIndex = 0;
-            _timer = 0f;
         }
 
         public Animation GetCurrentAnimation()

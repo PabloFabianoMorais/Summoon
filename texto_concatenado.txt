@@ -1,0 +1,2642 @@
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Game1.cs
+﻿using System;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using sunmoon.Core.Factory;
+using sunmoon.Core.Management;
+using sunmoon.Core.Services;
+using sunmoon.Scenes;
+
+namespace sunmoon;
+
+public class Game1 : Game
+{
+    private GraphicsDeviceManager _graphics;
+    private SpriteBatch _spriteBatch;
+
+    public Game1()
+    {
+        _graphics = new GraphicsDeviceManager(this);
+        Content.RootDirectory = "Content";
+        IsMouseVisible = true;
+
+        _graphics.SynchronizeWithVerticalRetrace = false;
+        IsFixedTimeStep = false;
+    }
+
+    protected override void Initialize()
+    {
+        InputManager.Initialize();
+        GameObjectFactory.Initialize(Content);
+        SceneManager.Initialize(Content);
+
+        base.Initialize();
+    }
+
+    protected override void LoadContent()
+    {
+        _spriteBatch = new SpriteBatch(GraphicsDevice);
+
+        SceneManager.LoadScene(new GamePlayScene());
+    }
+
+    protected override void Update(GameTime gameTime)
+    {
+        if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
+            Exit();
+
+        InputManager.Update();
+        DebugService.Update(gameTime);
+        SceneManager.Update(gameTime);
+
+        base.Update(gameTime);
+    }
+
+    protected override void Draw(GameTime gameTime)
+    {
+        GraphicsDevice.Clear(Color.HotPink);
+
+        SceneManager.Draw(_spriteBatch);
+
+        base.Draw(gameTime);
+    }
+}
+
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Game1.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Program.cs
+﻿using var game = new sunmoon.Game1();
+game.Run();
+
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Program.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Combat\HealthComponent.cs
+using System;
+using sunmoon.Core.ECS;
+
+namespace sunmoon.Components.Combat
+{
+    public class HealthComponent : Component
+    {
+        public float MaxHealth { get; set; }
+        public float CurrentHealth { get; private set; }
+        public bool IsDead { get; private set; }
+        public event Action OnDeath;
+        public event Action<float, float> OnHealthChanged;
+
+        public override void Initialize()
+        {
+            base.Initialize();
+            CurrentHealth = MaxHealth;
+            IsDead = false;
+        }
+
+        public void TakeDemage(float amount)
+        {
+            if (IsDead) return;
+
+            CurrentHealth -= amount;
+            CurrentHealth = Math.Max(0, CurrentHealth);
+            OnHealthChanged?.Invoke(CurrentHealth, MaxHealth);
+            if (CurrentHealth <= 0)
+                Die();
+        }
+
+        private void Die()
+        {
+            if (IsDead) return;
+
+            IsDead = true;
+            OnDeath?.Invoke();
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Combat\HealthComponent.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Core\EntityComponent.cs
+
+using sunmoon.Core.ECS;
+
+namespace sunmoon.Components.Core
+{
+    public class EntityComponent : Component
+    {
+        public long Id { get; set; }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Core\EntityComponent.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Core\TagsComponent.cs
+
+using System.Collections.Generic;
+using sunmoon.Core.ECS;
+
+namespace sunmoon.Components.Core
+{
+    public class TagsComponent : Component
+    {
+        public HashSet<string> Tags { get; set; } = new HashSet<string>();
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Core\TagsComponent.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Core\TransformComponent.cs
+using Microsoft.Xna.Framework;
+using sunmoon.Core.ECS;
+
+namespace sunmoon.Components.Core
+{
+    public class TransformComponent : Component, IUpdatableComponent
+    {
+        public Vector2 Position;
+        public float Rotation = 0f;
+        public Vector2 Scale { get; set; } = Vector2.One;
+
+        public override void Initialize()
+        {
+            base.Initialize();
+        }
+
+        public void Update(GameTime gameTime)
+        {
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Core\TransformComponent.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Graphics\AnimatedSpriteComponent.cs
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
+using sunmoon.Core.ECS;
+using sunmoon.Core.Graphics;
+using sunmoon.Components.Core;
+
+namespace sunmoon.Components.Graphics
+{
+    public class AnimatedSpriteComponent : Component, IUpdatableComponent, IDrawableComponent, IContentLoadable
+    {
+        public Dictionary<string, Animation> Animations { get; set; } = new Dictionary<string, Animation>();
+        public string CurrentAnimationName { get; set; }
+        public Color Color { get; set; } = Color.White;
+        public Vector2 Origin { get; set; } = Vector2.Zero;
+        public bool AutoCenterOrigin { get; set; } = false;
+        public SpriteEffects SpriteEffects { get; set; } = SpriteEffects.None;
+        public float LayerDepth { get; set; } = 0f;
+
+        private TransformComponent _transformComponent;
+        private Animation _currentAnimation;
+        private int _currentFrameIndex;
+        private float _timer;
+
+        public override void Initialize()
+        {
+            base.Initialize();
+            _transformComponent = GameObject.GetComponent<TransformComponent>();
+
+            if (!string.IsNullOrEmpty(CurrentAnimationName))
+            {
+                Play(CurrentAnimationName);
+            }
+            else if (Animations.Any())
+            {
+                Play(Animations.Keys.First());
+            }
+
+        }
+
+        public void LoadContent(ContentManager content)
+        {
+            foreach (var anim in Animations.Values)
+            {
+                anim.Texture = content.Load<Texture2D>(anim.TexturePath);
+            }
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            if (_currentAnimation == null) return;
+
+            _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (_timer >= _currentAnimation.FrameDuration)
+            {
+                _timer -= _currentAnimation.FrameDuration;
+                _currentFrameIndex++;
+
+                if (_currentFrameIndex >= _currentAnimation.FrameCount)
+                {
+                    // Se a animação não deve repetir, nós a "congelamos" no último frame
+                    // Decrementando o índice de volta para o valor máximo válido.
+                    _currentFrameIndex = 0;
+                }
+                else if (!_currentAnimation.IsLooping)
+                {
+                    _currentFrameIndex = _currentFrameIndex - 1;
+                }
+            }
+        }
+
+        public void Draw(SpriteBatch spriteBatch)
+        {
+            if (_currentAnimation == null || _currentAnimation.Texture == null) return;
+
+            var sourceRect = new Rectangle(
+                _currentFrameIndex * _currentAnimation.FrameWidth,
+                0,
+                _currentAnimation.FrameWidth,
+                _currentAnimation.FrameHeight
+            );
+
+            var originToUse = this.Origin;
+
+            if (this.AutoCenterOrigin)
+                originToUse = new Vector2(sourceRect.Width / 2f, sourceRect.Height / 2);
+
+            spriteBatch.Draw(
+                texture: _currentAnimation.Texture,
+                position: _transformComponent.Position,
+                sourceRectangle: sourceRect,
+                color: this.Color,
+                rotation: _transformComponent.Rotation,
+                origin: originToUse,
+                scale: _transformComponent.Scale,
+                effects: this.SpriteEffects,
+                layerDepth: this.LayerDepth
+            );
+        }
+
+
+        public void Play(string animationName)
+        {
+            if (!Animations.ContainsKey(animationName) || _currentAnimation == Animations[animationName])
+                return;
+
+            _currentAnimation = Animations[animationName];
+            CurrentAnimationName = animationName;
+            _currentFrameIndex = 0;
+            _timer = 0f;
+        }
+
+        public Animation GetCurrentAnimation()
+        {
+            return _currentAnimation;
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Graphics\AnimatedSpriteComponent.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Graphics\SpriteRendererComponent.cs
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
+using sunmoon.Core.ECS;
+using sunmoon.Components.Core;
+using sunmoon.utils;
+
+namespace sunmoon.Components.Graphics
+{
+    public class SpriteRendererComponent : Component, IDrawableComponent, IContentLoadable
+    {
+        private TransformComponent _transformComponent;
+
+        public Texture2D Texture { get; set; }
+        public string TexturePath { get; set; }
+
+        public Rectangle? SourceRectangle { get; set; } = null;
+        public Color Color { get; set; } = Color.White;
+        public Vector2 Origin { get; set; } = Vector2.Zero;
+        public bool AutoCenterOrigin { get; set; } = false;
+        public SpriteEffects SpriteEffects { get; set; } = SpriteEffects.None;
+        public float LayerDepth { get; set; } = 0f;
+
+        public override void Initialize()
+        {
+            _transformComponent = GameObject?.GetComponent<TransformComponent>();
+            base.Initialize();
+        }
+
+        public void LoadContent(ContentManager content)
+        {
+            if (!string.IsNullOrEmpty(TexturePath))
+            {
+                Texture = content.Load<Texture2D>(TexturePath);
+            }
+        }
+
+        public void Draw(SpriteBatch spriteBatch)
+        {
+            var originToUse = this.Origin;
+            if (this.AutoCenterOrigin)
+                originToUse = new Vector2(this.Texture.Width / 2f, this.Texture.Height / 2f);
+
+
+            spriteBatch.Draw(
+                texture: this.Texture,
+                position: this._transformComponent.Position,
+                sourceRectangle: this.SourceRectangle,
+                color: this.Color,
+                rotation: _transformComponent.Rotation,
+                origin: originToUse,
+                scale: _transformComponent.Scale,
+                effects: this.SpriteEffects,
+                layerDepth: this.LayerDepth
+            );
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Graphics\SpriteRendererComponent.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Items\EquipmentComponent.cs
+using sunmoon.Core.ECS;
+
+namespace sunmoon.Components.Items
+{
+    public class EquipmentComponent : Component
+    {
+        public GameObject RightHand { get; private set; }
+        public GameObject LeftHand { get; private set; }
+        public GameObject Backpack { get; private set; }
+        public GameObject Head { get; private set; }
+        public GameObject Chest { get; private set; }
+        public GameObject Legs { get; private set; }
+
+        public bool EquipItem(GameObject itemToEquip)
+        {
+            var itemComponent = itemToEquip.GetComponent<ItemComponent>();
+            if (itemComponent == null) return false;
+
+            switch (itemComponent.EquipmentSlot)
+            {
+                case EquipmentSlot.Hand:
+                    if (RightHand == null) {RightHand = itemToEquip; return true; }
+                    else if (LeftHand == null) {LeftHand = itemToEquip; return true; }
+                    break;
+                case EquipmentSlot.Backpack:
+                    if (Backpack == null) {Backpack = itemToEquip; return true;}
+                    break;
+                case EquipmentSlot.Head:
+                    if (Head == null) {Head = itemToEquip; return true;}
+                    break;
+                case EquipmentSlot.Chest:
+                    if (Chest == null) {Chest = itemToEquip; return true;}
+                    break;
+                case EquipmentSlot.Legs:
+                    if (Legs == null) {Legs = itemToEquip; return true;}
+                    break;
+            }
+
+            return false;
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Items\EquipmentComponent.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Items\InventoryComponent.cs
+
+using System.Collections.Generic;
+using sunmoon.Core.ECS;
+
+namespace sunmoon.Components.Items
+{
+    public class InventoryComponent
+    { 
+        
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Items\InventoryComponent.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Items\InventorySlot.cs
+using sunmoon.Core.ECS;
+
+namespace sunmoon.Components.Items
+{
+    public class InventorySlot
+    {
+        public GameObject Item { get; private set; }
+        public int Count { get; set; }
+
+        public InventorySlot(GameObject item, int count)
+        {
+            Item = item;
+            Count = count;
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Items\InventorySlot.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Items\ItemComponent.cs
+using sunmoon.Core.ECS;
+
+namespace sunmoon.Components.Items
+{
+    public enum ItemType
+    {
+
+        Weapon,
+        Armor,
+        Consumable,
+        Backpack,
+        Misc
+    }
+    public enum EquipmentSlot
+    {
+        None,
+        Hand,
+        Head,
+        Chest,
+        Legs,
+        Backpack
+    }
+    public class ItemComponent : Component
+    {
+        public string Name { get; set; }
+        public float Weight { get; set; }
+        public ItemType ItemType { get; set; }
+        public EquipmentSlot EquipmentSlot { get; set; }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Items\ItemComponent.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Movement\MovementComponent.cs
+using Microsoft.Xna.Framework;
+using sunmoon.Core.ECS;
+using sunmoon.Components.Core;
+
+namespace sunmoon.Components.Movement
+{
+    public class MovementComponent : Component, IUpdatableComponent
+    {
+        private TransformComponent _transformComponent;
+
+        public Vector2 Velocity = new Vector2(0, 0);
+        public float MovementSpeed = 0f;
+        public override void Initialize()
+        {
+            _transformComponent = GameObject?.GetComponent<TransformComponent>();
+            base.Initialize();
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            _transformComponent.Position += Velocity * (float)(gameTime.ElapsedGameTime.TotalSeconds);
+            Velocity = new Vector2(0, 0);
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Movement\MovementComponent.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Player\PlayerInputComponent.cs
+using System;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using sunmoon.Components.Movement;
+using sunmoon.Components.Core;
+using sunmoon.Components.Graphics;
+using sunmoon.Core;
+using sunmoon.Core.ECS;
+using sunmoon.Core.Management;
+
+namespace sunmoon.Components.Player
+{
+    // Gerencia os inpus que controlam o player
+    public class PlayerInputComponent : Component, IUpdatableComponent
+    {
+        private MovementComponent _movementComponent;
+        private AnimatedSpriteComponent _animatedSpriteComponent;
+
+        public override void Initialize()
+        {
+            _movementComponent = GameObject.GetComponent<MovementComponent>();
+            _animatedSpriteComponent = GameObject.GetComponent<AnimatedSpriteComponent>();
+            base.Initialize();
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            KeyboardState keyboardState = Keyboard.GetState();
+            var velocity = _movementComponent.Velocity;
+
+            // Movemento WASD
+            // FIXME: Se o jogador pressionar duas teclas opostas ao mesmo tempo elas
+            //  irão se anular. Dar prioridade a última tecla pressionada
+            if (InputManager.IsActionDown("MoveRight"))
+            {
+                velocity.X += _movementComponent.MovementSpeed;
+                _animatedSpriteComponent.SpriteEffects = SpriteEffects.None;
+            }
+            if (InputManager.IsActionDown("MoveLeft"))
+            {
+                velocity.X -= _movementComponent.MovementSpeed;
+                _animatedSpriteComponent.SpriteEffects = SpriteEffects.FlipHorizontally;
+            }
+            if (InputManager.IsActionDown("MoveDown"))
+                velocity.Y += _movementComponent.MovementSpeed;
+            if (InputManager.IsActionDown("MoveUp"))
+                velocity.Y -= _movementComponent.MovementSpeed;
+
+            if (velocity.LengthSquared() > 0)
+            {
+                _animatedSpriteComponent.Play("Running");
+            }
+            else
+            {
+                _animatedSpriteComponent.Play("Idle");
+            }
+
+            _movementComponent.Velocity = velocity;
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Components\Player\PlayerInputComponent.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\ECS\Component.cs
+
+namespace sunmoon.Core.ECS
+{
+    /// <summary>
+    /// A classe base para todos os componentes no sistema ECS.
+    /// Define um 'pedaço' de dados ou lógica que pode ser anexado a um GameObject.
+    /// Esta classe deve ser herdada, não instanciada diretamente.
+    /// </summary>
+    public class Component : IComponent
+    {
+
+        public GameObject GameObject { get; set; }
+
+        public virtual void Initialize() { }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\ECS\Component.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\ECS\GameObject.cs
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using sunmoon.Components.Graphics;
+using sunmoon.Components.Core;
+
+
+namespace sunmoon.Core.ECS
+{
+    /// <summary>
+    /// Representa a 'Entidade' na arquitetura Entidade-Componente-Sistema (ECS).
+    /// É um contêiner universal para Componentes, que definem seu comportamento e dados.
+    /// </summary>
+    public class GameObject
+    {
+        public long Id { get; set; }
+        private readonly List<Component> _allComponents = new List<Component>();
+        private readonly List<IDrawableComponent> _drawableComponents = new List<IDrawableComponent>();
+        private readonly List<IUpdatableComponent> _updatableComponents = new List<IUpdatableComponent>();
+        public Rectangle BoundingBox { get
+            {
+                var transform = GetComponent<TransformComponent>();
+                if (transform == null)
+                    return Rectangle.Empty;
+
+                int width = 0;
+                int height = 0;
+
+                var animSprite = GetComponent<AnimatedSpriteComponent>();
+
+                if (animSprite != null && animSprite.GetCurrentAnimation() != null)
+                {
+                    width = (int)(animSprite.GetCurrentAnimation().FrameWidth * transform.Scale.X);
+                    height = (int)(animSprite.GetCurrentAnimation().FrameHeight * transform.Scale.Y);
+                }
+                else
+                {
+                    var sprite = GetComponent<SpriteRendererComponent>();
+                    if (sprite != null && sprite.Texture != null)
+                    {
+                        width = (int)(sprite.Texture.Width * transform.Scale.X);
+                        height = (int)(sprite.Texture.Height * transform.Scale.Y);
+                    }
+                }
+
+                return new Rectangle(
+                    (int)transform.Position.X,
+                    (int)transform.Position.Y,
+                    width,
+                    height
+                );
+            }
+        }
+
+
+
+        public GameObject() { }
+
+        /// <returns>Retorna todos os componentes do objeto</returns>
+        public List<Component> GetAllComponents()
+        {
+            return _allComponents;
+        }
+
+        /// <typeparam name="T">Deve ser do tipo Component</typeparam>
+        /// <returns>Componente adicionado</returns>
+        public T AddComponent<T>() where T : Component, new()
+        {
+            T newComponent = new T();
+            newComponent.GameObject = this;
+            if (newComponent is IUpdatableComponent updatable)
+                _updatableComponents.Add(updatable);
+
+            if (newComponent is IDrawableComponent drawable)
+                _drawableComponents.Add(drawable);
+
+            _allComponents.Add(newComponent);
+
+            return newComponent;
+        }
+
+        /// <summary>
+        /// Adiciona um componente à lista de componentes e atribui suas heranças.
+        /// </summary>
+        /// <param name="componentType">Tipo de component que deve ser do tipo Component.</param>
+        /// <returns>Componente adicionado.</returns>
+        /// <exception cref="ArgumentException">Se o tipo do componente não for Component.</exception>
+        public Component AddComponent(Type componentType)
+        {
+            if (!typeof(Component).IsAssignableFrom(componentType))
+                throw new ArgumentException($"{componentType.Name} não herda de Component");
+
+            Component newComponent = (Component)Activator.CreateInstance(componentType);
+
+            newComponent.GameObject = this;
+            if (newComponent is IUpdatableComponent updatable)
+                _updatableComponents.Add(updatable);
+
+            if (newComponent is IDrawableComponent drawable)
+                _drawableComponents.Add(drawable);
+
+            _allComponents.Add(newComponent);
+
+            return newComponent;
+        }
+
+
+        /// <returns>Procura o componente específicado.</returns>
+        public T GetComponent<T>() where T : Component
+        {
+            return _allComponents.OfType<T>().FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Remove o componente especificado.
+        /// </summary>
+        public void RemoveComponent<T>() where T : Component
+        {
+            T component = GetComponent<T>();
+            if (component == null) return;
+
+            if (component is IDrawableComponent drawable)
+                _drawableComponents.Remove(drawable);
+            if (component is IUpdatableComponent updatable)
+                _updatableComponents.Remove(updatable);
+            _allComponents.Remove(component);
+        }
+
+
+        public virtual void Initialize()
+        {
+            foreach (Component component in _allComponents)
+            {
+                component.Initialize();
+            }
+        }
+
+
+        public virtual void Update(GameTime gameTime)
+        {
+            foreach (IUpdatableComponent component in _updatableComponents)
+            {
+                component.Update(gameTime);
+            }
+        }
+
+        public virtual void Draw(SpriteBatch spriteBatch)
+        {
+            foreach (IDrawableComponent component in _drawableComponents)
+            {
+                component.Draw(spriteBatch);
+            }
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\ECS\GameObject.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\ECS\IComponent.cs
+namespace sunmoon.Core.ECS
+{
+    public interface IComponent
+    {
+        public GameObject GameObject { get; set; }
+
+        void Initialize() { }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\ECS\IComponent.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\ECS\IContentLoadable.cs
+using Microsoft.Xna.Framework.Content;
+
+namespace sunmoon.Core.ECS
+{
+    public interface IContentLoadable
+    {
+        void LoadContent(ContentManager contentManager);
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\ECS\IContentLoadable.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\ECS\IDrawableComponent.cs
+using Microsoft.Xna.Framework.Graphics;
+
+namespace sunmoon.Core.ECS
+{
+    public interface IDrawableComponent
+    {
+        void Draw(SpriteBatch spriteBatch);
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\ECS\IDrawableComponent.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\ECS\IUpdatableComponent.cs
+using Microsoft.Xna.Framework;
+
+namespace sunmoon.Core.ECS
+{
+    public interface IUpdatableComponent
+    {
+        void Update(GameTime gameTime);
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\ECS\IUpdatableComponent.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Factory\GameObjectFactory.cs
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using sunmoon.Components;
+using sunmoon.Core.ECS;
+using sunmoon.Core.Serialization;
+
+namespace sunmoon.Core.Factory
+{
+    public static class GameObjectFactory
+    {
+        private static ContentManager _content;
+        private static JObject _prefabsData;
+
+        private static JsonSerializerSettings _serializerSettings;
+
+        /// <summary>
+        /// Inicializa a fábrica carregando todas as definições de prefab (.json) da pasta de conteúdo da memória
+        /// </summary>
+        /// <param name="content">O ContentManager principal do jogo, usado para carregar assets para componentes.</param>
+        public static void Initialize(ContentManager content)
+        {
+            _content = content;
+
+            _serializerSettings = new JsonSerializerSettings
+            {
+                Converters = new List<JsonConverter>
+                {
+                    new Vector2Converter()
+                }
+            };
+
+            _prefabsData = new JObject();
+
+            string prefabsRootPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content/data/prefabs");
+
+            if (Directory.Exists(prefabsRootPath))
+            {
+                string[] prefabFiles = Directory.GetFiles(prefabsRootPath, "*.json", SearchOption.AllDirectories);
+
+                foreach (string filePath in prefabFiles)
+                {
+                    string prefabName = Path.GetFileNameWithoutExtension(filePath);
+
+                    string jsonText = File.ReadAllText(filePath);
+
+                    JToken prefabJson = JToken.Parse(jsonText);
+
+                    _prefabsData.Add(prefabName, prefabJson);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Cria um novo GameObject com base em um definição de prefab, aplicando opcionalmente dados de mesclagem.
+        /// </summary>
+        /// <param name="prefabName">Nome do prefab válido.</param>
+        /// <param name="overrides">Um JObject contendo propriedades para mesclar sobre os dados do prefab base, definindo instâncias únicas.</param>
+        /// <returns>Um GameObject totalmente inicializado e construído, pronto para ser adicionado ao mundo do jogo.</returns>
+        /// <exception cref="ArgumentException">Lançada caso o nome do especificado não for encontrado em prefabs.</exception>
+        /// <exception cref="Exception">Lançada se o nome do componente especificado no prefab não corresponder a nenhuma classe de comopnente existente.</exception>
+        public static GameObject Create(string prefabName, JObject overrides = null)
+        {
+            if (!_prefabsData.TryGetValue(prefabName, out JToken prefabToken))
+                throw new ArgumentException($"Prefab com nome {prefabName} não encontrado");
+
+            JObject finalPrefaData = GetMergedPrefabData(prefabName);
+
+            if (overrides != null)
+            {
+                finalPrefaData.Merge(overrides, new JsonMergeSettings
+                {
+                    MergeArrayHandling = MergeArrayHandling.Replace,
+                    MergeNullValueHandling = MergeNullValueHandling.Ignore
+                });
+            }
+
+            var prefabData = (JObject)prefabToken;
+            var gameObject = new GameObject();
+
+            var componentsData = (JObject)finalPrefaData["components"];
+
+
+            foreach (var prop in componentsData.Properties())
+            {
+                string componentTypeName = prop.Name;
+                JObject componentProperties = (JObject)prop.Value;
+
+                Type type = Assembly.GetExecutingAssembly().GetTypes().FirstOrDefault(t => t.Name == componentTypeName);
+                if (type == null)
+                {
+                    throw new Exception($"Componente {componentTypeName} não encontrado");
+                }
+
+                var component = gameObject.AddComponent(type) as Component;
+
+                JsonConvert.PopulateObject(componentProperties.ToString(), component, _serializerSettings);
+
+                if (component is IContentLoadable loadableComponent)
+                {
+                    loadableComponent.LoadContent(_content);
+                }
+            }
+
+            gameObject.Initialize();
+            return gameObject;
+        }
+
+        private static JObject GetMergedPrefabData(string prefabName)
+        {
+
+
+            if (!_prefabsData.TryGetValue(prefabName, out JToken prefabToken))
+
+                throw new ArgumentException($"Prefab com nome '{prefabName}' não encontrado.");
+
+            var prefabData = (JObject)prefabToken.DeepClone();
+
+            if (prefabData.TryGetValue("inherits", out JToken inheritsToken))
+            {
+                JObject parentData = new JObject();
+
+                if (inheritsToken.Type == JTokenType.String)
+                {
+                    string parentName = inheritsToken.ToString();
+                    parentData = GetMergedPrefabData(parentName);
+                }
+                else if (inheritsToken.Type == JTokenType.Array)
+                {
+                    foreach (var parentNameToken in inheritsToken.Children<JValue>())
+                    {
+                        string parentName = parentNameToken.Value.ToString();
+                        JObject partialParentData = GetMergedPrefabData(parentName);
+                        parentData.Merge(partialParentData);
+                    }
+                }
+
+                parentData.Merge(prefabData, new JsonMergeSettings
+                {
+                    MergeArrayHandling = MergeArrayHandling.Union,
+                    MergeNullValueHandling = MergeNullValueHandling.Ignore
+                });
+
+                return parentData;
+            }
+
+            return prefabData;
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Factory\GameObjectFactory.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Graphics\Animation.cs
+
+using Microsoft.Xna.Framework.Graphics;
+using Newtonsoft.Json;
+
+namespace sunmoon.Core.Graphics
+{
+    /// <summary>
+    /// Estrutura de dados para um animação.
+    /// </summary>
+    public class Animation
+    {
+        public string Name { get; set; }
+        public string TexturePath { get; set; }
+        public int FrameWidth { get; set; }
+        public int FrameHeight { get; set; }
+        public int FrameCount { get; set; }
+        public float FrameDuration { get; set; }
+        public bool IsLooping { get; set; }
+
+        [JsonIgnore]
+        public Texture2D Texture { get; set; }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Graphics\Animation.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Management\GameObjectManager.cs
+using System.Collections.Generic;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using sunmoon.Components.Core;
+using sunmoon.Core.ECS;
+using sunmoon.Core.World;
+
+namespace sunmoon.Core.Management
+{
+    /// <summary>
+    /// Gerencia e organiza GameObjects
+    /// </summary>
+    public class GameObjectManager
+    {
+        private readonly List<GameObject> _gameObjects = new List<GameObject>();
+
+        private readonly Dictionary<long, GameObject> _gameObjectsById = new Dictionary<long, GameObject>();
+
+        private readonly List<GameObject> _addedGameObjects = new List<GameObject>();
+        private readonly List<GameObject> _removedGameObjects = new List<GameObject>();
+        private int _renderedObjectsCount = 0;
+
+        public void Add(GameObject gameObject)
+        {
+            _addedGameObjects.Add(gameObject);
+        }
+
+        public void Remove(GameObject gameObject)
+        {
+            _removedGameObjects.Add(gameObject);
+        }
+
+        public int GetObjectsCount()
+        {
+            return _gameObjects.Count;
+        }
+
+        public int GetRenderedObjectsCount()
+        {
+            return _renderedObjectsCount;
+        }
+
+        public GameObject Find(long id)
+        {
+            _gameObjectsById.TryGetValue(id, out GameObject foundObject);
+            return foundObject;
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            ProcessAdditions();
+            ProcessRemoval();
+
+            foreach (var gameObject in _gameObjects)
+            {
+                gameObject.Update(gameTime);
+            }
+
+            ProcessRemoval(); // Garante que todos os objetos pendentes para remoção foram removidos
+        }
+
+        public void Draw(SpriteBatch spriteBatch, Camera camera)
+        {
+            Rectangle cameraBounds = camera.GetVisibleArea();
+            _renderedObjectsCount = 0;
+
+            foreach (var gameObject in _gameObjects)
+            {
+                if (cameraBounds.Intersects(gameObject.BoundingBox))
+                {
+                    gameObject.Draw(spriteBatch);
+                    _renderedObjectsCount++;
+                }
+            }
+        }
+
+        private void ProcessAdditions()
+        {
+            // Adiciona todos os objetos pendentes para serem adicionados
+            if (_addedGameObjects.Count == 0) return;
+
+            foreach (var gameObject in _addedGameObjects)
+            {
+                _gameObjects.Add(gameObject);
+                var entityComponent = gameObject.GetComponent<EntityComponent>();
+
+                if (entityComponent != null)
+                {
+                    _gameObjectsById[entityComponent.Id] = gameObject;
+                }
+            }
+            _addedGameObjects.Clear();
+        }
+
+        private void ProcessRemoval()
+        {
+            // Remove todos os objetos pendentes para serem removidos
+            if (_removedGameObjects.Count == 0) return;
+
+            foreach (var gameObject in _removedGameObjects)
+            {
+                _gameObjects.Remove(gameObject);
+                var entityComponent = gameObject.GetComponent<EntityComponent>();
+                if (entityComponent != null)
+                {
+                    _gameObjectsById.Remove(entityComponent.Id);
+                }
+            }
+
+            _removedGameObjects.Clear();
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Management\GameObjectManager.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Management\IdManager.cs
+using System.Threading;
+
+namespace sunmoon.Core.Management
+{
+    /// <summary>
+    /// Gerencia os ids
+    /// </summary>
+    public static class IdManager
+    {
+        private static long _nextId = 0;
+
+        /// <summary>
+        /// Gera um id único
+        /// </summary>
+        /// <returns>Retorna um id</returns>
+        public static long GenerateId()
+        {
+            return Interlocked.Increment(ref _nextId);
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Management\IdManager.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Management\InputManager.cs
+
+using System;
+using System.Collections.Generic;
+using Microsoft.Xna.Framework.Input;
+
+namespace sunmoon.Core.Management
+{
+    /// <summary>
+    /// Gerencia, manipula e mapeia as ações de entrada do usuário.
+    /// </summary>
+    public static class InputManager
+    {
+        private static KeyboardState _currentKeyboardState;
+        private static KeyboardState _previousKeyboardState;
+        private static MouseState _currentMouseState;
+        private static MouseState _previousMouseState;
+
+        private static readonly Dictionary<string, Keys> _keyMappings = new Dictionary<string, Keys>();
+
+        public static void Initialize()
+        {
+            _keyMappings["MoveUp"] = Keys.W;
+            _keyMappings["MoveDown"] = Keys.S;
+            _keyMappings["MoveLeft"] = Keys.A;
+            _keyMappings["MoveRight"] = Keys.D;
+            _keyMappings["ToggleDebug"] = Keys.P;
+            _keyMappings["ToggleInventory"] = Keys.E;
+            _keyMappings["ReloadMap"] = Keys.R;
+            _keyMappings["TakeDemage"] = Keys.T;
+        }
+
+        public static void Update()
+        {
+            _previousKeyboardState = _currentKeyboardState;
+            _currentKeyboardState = Keyboard.GetState();
+
+            _previousMouseState = _currentMouseState;
+            _currentMouseState = Mouse.GetState();
+        }
+
+        /// <summary>
+        /// Retorna true se a tecla for pressionada.
+        /// </summary>
+        /// <param name="key">Tecla a ser verificada.</param>
+        /// <returns>True ou false</returns>
+        public static bool IsKeyDown(Keys key)
+        {
+            return _currentKeyboardState.IsKeyDown(key);
+        }
+
+        /// <summary>
+        /// Retorna true se a tecla foi pressionada nesse exato frame.
+        /// </summary>
+        /// <param name="key">Tecla a ser verificada.</param>
+        /// <returns>rue ou false</returns>
+        public static bool WasKeyPressed(Keys key)
+        {
+            return _currentKeyboardState.IsKeyDown(key) && _previousKeyboardState.IsKeyUp(key);
+        }
+
+        /// <summary>
+        /// Retorna true se a tecla foi solta nesse exato frame.
+        /// </summary>
+        /// <param name="key">Tecla a ser verificada.</param>
+        /// <returns>True ou false</returns>
+        public static bool WasKeyReleased(Keys key)
+        {
+            return _currentKeyboardState.IsKeyUp(key) && _previousKeyboardState.IsKeyDown(key);
+        }
+
+        /// <summary>
+        /// Verifica se uma ação foi acionada.
+        /// </summary>
+        /// <param name="action">O nome da ação a ser verificada</param>
+        /// <returns>True ou false</returns>
+        public static bool IsActionDown(string action)
+        {
+            if (_keyMappings.TryGetValue(action, out var key))
+            {
+                return IsKeyDown(key);
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Verifica se uma ação que foi acionada nesse exato frame.
+        /// </summary>
+        /// <param name="action">O nome da ação a ser verificada</param>
+        /// <returns>True ou false</returns>
+        public static bool IsActionPressed(string action)
+        {
+            if (_keyMappings.TryGetValue(action, out var key))
+            {
+                return WasKeyPressed(key);
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Verifica se uma ação que foi solta nesse exato frame.
+        /// </summary>
+        /// <param name="action">O nome da ação a ser verificada</param>
+        /// <returns>True ou false</returns>
+        public static bool IsActionReleased(string action)
+        {
+            
+            if (_keyMappings.TryGetValue(action, out var key))
+            {
+                return WasKeyReleased(key);
+            }
+            return false;
+        }
+
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Management\InputManager.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Management\TilemapManager.cs
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Newtonsoft.Json.Linq;
+using sunmoon.Core.ECS;
+using sunmoon.Core.Factory;
+using sunmoon.Core.World;
+
+namespace sunmoon.Core.Management
+{
+    /// <summary>
+    /// Gerencia o mapa, chunks e tiles.
+    /// </summary>
+    public class TilemapManager
+    {
+        public const int DEFAULT_TILE_SIZE = 8;
+
+        private readonly Dictionary<Point, Chunk> _chunks = new Dictionary<Point, Chunk>();
+        private readonly WorldGenerator _worldGenerator;
+        private int _renderedChunksCount;
+        private readonly ConcurrentQueue<Point> _generationQueue = new ConcurrentQueue<Point>();
+        private readonly ConcurrentQueue<ChunkBluePrint> _generatedBluePrintsQueue = new ConcurrentQueue<ChunkBluePrint>();
+        private readonly ConcurrentDictionary<Point, bool> _requestedChunks = new ConcurrentDictionary<Point, bool>();
+        private Task _generationTask;
+        private CancellationTokenSource _cancellationTokenSource;
+
+        private ChunkBluePrint _currentBlueprintToBuild = null;
+        private int _buildCoordX = 0;
+        private int _buildCoordY = 0;
+        private const int TILES_TO_BUILD_PER_FRAME = 32;
+
+        private JObject _tileOverrides = new JObject { ["components"] = new JObject { ["TransformComponent"] = new JObject { ["Position"] = new JObject() } } };
+
+        public TilemapManager(WorldGenerator worldGenerator)
+        {
+            _worldGenerator = worldGenerator;
+            StartGenerationThread();
+        }
+
+        private void StartGenerationThread()
+        {
+            _cancellationTokenSource = new CancellationTokenSource();
+            var token = _cancellationTokenSource.Token;
+
+            _generationTask = Task.Run(() =>
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    if (_generationQueue.TryDequeue(out Point chunkPosition))
+                    {
+                        var newBluePrint = CreateChunkBluePrint(chunkPosition.X, chunkPosition.Y);
+
+                        _generatedBluePrintsQueue.Enqueue(newBluePrint);
+                    }
+                    else
+                    {
+                        Thread.Sleep(10);
+                    }
+                }
+            }, token);
+        }
+
+        /// <summary>
+        /// Pede para um chunk ser gerado, adicionando-o à fila de geração.
+        /// </summary>
+        public void RequestChunkGeneration(int chunkX, int chunkY)
+        {
+            var chunkPos = new Point(chunkX, chunkY);
+
+            if (_requestedChunks.TryAdd(chunkPos, true))
+            {
+                _generationQueue.Enqueue(new Point(chunkX, chunkY));
+            }
+        }
+
+        public bool IsChunkRequestedOrExists(int chunkX, int chunkY)
+        {
+            var chunkPos = new Point(chunkX, chunkY);
+            return _chunks.ContainsKey(chunkPos) || _requestedChunks.ContainsKey(chunkPos);
+        }
+
+        /// <summary>
+        /// Processa os chunks que foram gerados no thread em segundo plano e os adiciona ao mundo.
+        /// Deve ser chamado no thread principal (Update)
+        /// </summary>
+        public void ProcessGeneratedChunks()
+        {
+            if (_currentBlueprintToBuild == null)
+            {
+                if (!_generatedBluePrintsQueue.TryDequeue(out _currentBlueprintToBuild))
+                    return;
+
+                var newChunk = new Chunk(_currentBlueprintToBuild.ChunkPosition, DEFAULT_TILE_SIZE);
+                _chunks[_currentBlueprintToBuild.ChunkPosition] = newChunk;
+                _buildCoordX = 0;
+                _buildCoordY = 0;
+            }
+
+            var chunkBeingBuilt = _chunks[_currentBlueprintToBuild.ChunkPosition];
+            var positionJson = (JObject)_tileOverrides["components"]["TransformComponent"]["Position"];
+
+            for (int i = 0; i <= TILES_TO_BUILD_PER_FRAME; i++)
+            {
+                if (_buildCoordY >= Chunk.CHUNK_HEIGHT)
+                {
+                    _currentBlueprintToBuild = null;
+                    return;
+                }
+
+                TileData tileData = _currentBlueprintToBuild.Tiles[_buildCoordX, _buildCoordY];
+
+                if (!string.IsNullOrEmpty(tileData.PrefabName))
+                {
+
+                    var tilePosition = new Vector2(
+                        (_currentBlueprintToBuild.ChunkPosition.X * Chunk.CHUNK_WIDTH + _buildCoordX) * DEFAULT_TILE_SIZE,
+                        (_currentBlueprintToBuild.ChunkPosition.Y * Chunk.CHUNK_HEIGHT + _buildCoordY) * DEFAULT_TILE_SIZE
+                    );
+
+                    positionJson["X"] = tilePosition.X;
+                    positionJson["Y"] = tilePosition.Y;
+
+                    GameObject tileObject = GameObjectFactory.Create(tileData.PrefabName, _tileOverrides);
+                    chunkBeingBuilt.SetTile(_buildCoordX, _buildCoordY, tileObject);
+                }
+                _buildCoordX++;
+                if (_buildCoordX >= Chunk.CHUNK_WIDTH)
+                {
+                    _buildCoordX = 0;
+                    _buildCoordY++;
+                }
+            }
+        }
+
+        public void UnloadDistantChunks(int centerChunkX, int centerChunkY, int unloadRadius)
+        {
+            var chunksToRemove = new List<Point>();
+
+            foreach (var chunkPos in _chunks.Keys)
+            {
+                int dist_x = Math.Abs(chunkPos.X - centerChunkX);
+                int dist_y = Math.Abs(chunkPos.Y - centerChunkY);
+
+                if (dist_x > unloadRadius || dist_y > unloadRadius)
+                {
+                    chunksToRemove.Add(chunkPos);
+                }
+
+                foreach (var pos in chunksToRemove)
+                {
+                    _chunks.Remove(pos);
+                    _requestedChunks.TryRemove(pos, out _);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Verifica se o chunk nas coordenadas de chunks especificadas já foi gerado.
+        /// </summary>
+        /// <param name="chunkX">Posição X nas coordenadas de chunk.</param>
+        /// <param name="chunkY">Posição Y nas coordenadas de chunk.</param>
+        /// <returns>True se chunk existe, senão false.</returns>
+        public bool HasChunk(int chunkX, int chunkY)
+        {
+            return _chunks.ContainsKey(new Point(chunkX, chunkY));
+        }
+
+        public int GetRenderedChunksCount()
+        {
+            return _renderedChunksCount;
+        }
+
+        public int GetTotalChunksCount()
+        {
+            return _chunks.Count;
+        }
+
+        /// <summary>
+        /// Lógica de geração de um único chunk. Esta é a função que roda no thread secundário
+        /// </summary>
+        private ChunkBluePrint CreateChunkBluePrint(int chunkX, int chunkY)
+        {
+            var chunkPosition = new Point(chunkX, chunkY);
+            var newBluePrint = new ChunkBluePrint(chunkPosition);
+
+            for (int y = 0; y < Chunk.CHUNK_HEIGHT; y++)
+            {
+                for (int x = 0; x < Chunk.CHUNK_WIDTH; x++)
+                {
+                    int worldX = (chunkX * Chunk.CHUNK_WIDTH) + x;
+                    int worldY = (chunkY * Chunk.CHUNK_HEIGHT) + y;
+
+                    string prefabName = _worldGenerator.GetTilePrefabName(worldX, worldY);
+                    newBluePrint.Tiles[x, y] = new TileData { PrefabName = prefabName };
+                }
+            }
+
+            return newBluePrint;
+        }
+
+        /// <summary>
+        /// Para a tarefa de geração de forma segura
+        /// </summary>
+        public void StopGenerationThread()
+        {
+            _cancellationTokenSource?.Cancel();
+            _generationTask?.Wait();
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            foreach (var chunk in _chunks.Values)
+            {
+                chunk.Update(gameTime);
+            }
+        }
+
+        public void Draw(SpriteBatch spriteBatch, Camera camera)
+        {
+            Rectangle cameraBounds = camera.GetVisibleArea();
+            _renderedChunksCount = 0;
+            foreach (var chunk in _chunks.Values)
+            {
+                if (!cameraBounds.Intersects(chunk.BoundingBox)) continue;
+
+                chunk.Draw(spriteBatch);
+                _renderedChunksCount++;
+            }
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Management\TilemapManager.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Management\TileRegistry.cs
+using System.Collections.Generic;
+using Microsoft.Xna.Framework.Content;
+using sunmoon.Core.World;
+
+namespace sunmoon.Core.Management
+{
+    public class TileRegistry
+    {
+        private static Dictionary<string, TileType> _tileTypes = new Dictionary<string, TileType>();
+
+        public static void Initialize(ContentManager content)
+        {
+            
+        }
+    }   
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Management\TileRegistry.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Management\TimeManager.cs
+using System;
+using Microsoft.Xna.Framework;
+
+namespace sunmoon.Core.Management
+{
+    public enum TimeOfDay
+    {
+        Dawn,
+        Day,
+        Dusk,
+        Night
+    }
+    public class TimeManager
+    {
+        public float DayDurationInSeconds { get; set; } = 60f;
+        public float CurrentTime { get; private set; } = 0f;
+        public int DayCount { get; private set; } = 1;
+        public TimeOfDay CurrentTimeOfDay { get; private set; }
+
+        public event Action<TimeOfDay> OnTimeOfDayChanged;
+
+        public TimeManager()
+        {
+            CurrentTime = 0.25f;
+            UpdateState(0f);
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            float elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            float timeIncrement = elapsedSeconds / DayDurationInSeconds;
+
+            UpdateState(timeIncrement);
+        }
+
+        private void UpdateState(float timeIncrement)
+        {
+            CurrentTime += timeIncrement;
+
+            if (CurrentTime >= 1.0f)
+            {
+                CurrentTime -= 1.0f;
+                DayCount += 1;
+            }
+
+            var previousTimeOfDay = CurrentTimeOfDay;
+
+            if (CurrentTime >= 0.25f && CurrentTime < 0.75f)
+                CurrentTimeOfDay = TimeOfDay.Day;
+            else if (CurrentTime >= 0.75 && CurrentTime < 0.85)
+                CurrentTimeOfDay = TimeOfDay.Dusk;
+            else if (CurrentTime >= 0.85 || CurrentTime < 0.15f)
+                CurrentTimeOfDay = TimeOfDay.Night;
+            else
+                CurrentTimeOfDay = TimeOfDay.Dawn;
+
+            if (previousTimeOfDay != CurrentTimeOfDay)
+            {
+                OnTimeOfDayChanged?.Invoke(CurrentTimeOfDay);
+            }
+
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Management\TimeManager.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Serialization\Vector2Converter.cs
+using System;
+using Microsoft.Xna.Framework;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
+namespace sunmoon.Core.Serialization
+{
+    /// <summary>
+    /// Conversor entre estrutura de posição do prefab e Vector2.
+    /// </summary>
+    public class Vector2Converter : JsonConverter<Vector2>
+    {
+        /// Carrega o arquivo JSON e converte a estrutura de posição do prefab
+        /// para Vector2
+        public override Vector2 ReadJson(JsonReader reader, Type objectType, Vector2 existingValue, bool hasExistingValue, JsonSerializer jsonSerializer)
+        {
+            if (reader.TokenType == JsonToken.Null)
+            {
+                return Vector2.Zero;
+            }
+
+            JObject obj = JObject.Load(reader);
+            float x = obj["X"]?.Value<float>() ?? 0f;
+            float y = obj["Y"]?.Value<float>() ?? 0f;
+
+            return new Vector2(x, y);
+        }
+
+        /// Converte valor Vector2 para estrutura de posição prefab.
+        public override void  WriteJson(JsonWriter writer, Vector2 value, JsonSerializer serializer)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName("X");
+            writer.WriteValue(value.X);
+            writer.WritePropertyName("Y");
+            writer.WriteValue(value.Y);
+
+            writer.WriteEndObject();
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Serialization\Vector2Converter.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Services\DebugService.cs
+using Microsoft.Xna.Framework;
+using sunmoon.Core.Management;
+using sunmoon.Components.Core;
+using sunmoon.Core.ECS;
+using sunmoon.Components.Combat;
+
+namespace sunmoon.Core.Services
+{
+    /// <summary>
+    /// O serviço estático para rastrear e oferecer métricas de depuração globais
+    /// </summary>
+    public static class DebugService
+    {
+        public static float Fps { get; private set; }
+        private const float FPS_UPDATE_INTERVAL = 1.0f;
+
+        private static float _fpsTimer = 0f;
+        private static int _frameCount = 0;
+        private static TimeManager _timeManager;
+        public static int DayCount;
+        public static float CurrentTime { get; set; }
+        private static TransformComponent _playerTransform { get; set; }
+        public static Vector2 PlayerPosition { get; set; }
+        public static HealthComponent _playerHealth { get; set; }
+        public static float PlayerCurrentHealth { get; set; }
+        private static GameObjectManager _gameObjectManager { get; set; }
+        public static int ObjectsCount { get; set; }
+        public static int RenderedObjects { get; set; }
+        private static TilemapManager _tilemapManager { get; set; }
+        public static int RenderedChunks { get; set; }
+
+        public static void Initialize(
+            TimeManager timeManager,
+            TransformComponent playerTransform,
+            HealthComponent healthComponent,
+            GameObjectManager gameObjectManager,
+            TilemapManager tilemapManager
+        )
+        {
+            _timeManager = timeManager;
+            _playerTransform = playerTransform;
+            _playerHealth = healthComponent;
+            _gameObjectManager = gameObjectManager;
+            _tilemapManager = tilemapManager;
+        }
+
+        public static void Update(GameTime gameTime)
+        {
+            float elapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _fpsTimer += elapsed;
+            _frameCount++;
+
+            if (_fpsTimer >= FPS_UPDATE_INTERVAL)
+            {
+                Fps = _frameCount / _fpsTimer;
+                _fpsTimer = 0f;
+                _frameCount = 0;
+            }
+
+            if (_timeManager != null)
+            {
+                DayCount = _timeManager.DayCount;
+                CurrentTime = _timeManager.CurrentTime;
+            }
+            if (_playerTransform != null)
+                PlayerPosition = _playerTransform.Position;
+            if (_playerHealth != null)
+                PlayerCurrentHealth = _playerHealth.CurrentHealth;
+            if (_gameObjectManager != null)
+                {
+                    ObjectsCount = _gameObjectManager.GetObjectsCount();
+                    RenderedObjects = _gameObjectManager.GetRenderedObjectsCount();
+                }
+            if (_tilemapManager != null)
+                RenderedChunks = _tilemapManager.GetRenderedChunksCount();
+        } 
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\Services\DebugService.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\World\Camera.cs
+using System;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+
+namespace sunmoon.Core.World
+{
+    public class Camera
+    {
+        public Vector2 Position { get; set; }
+        public float Zoom { get; set; }
+        public float Rotation { get; set; }
+
+        private readonly Viewport _viewport;
+
+        public Camera(Viewport viewport)
+        {
+            _viewport = viewport;
+            Position = Vector2.Zero;
+            Zoom = 1.0f;
+            Rotation = 0.0f;
+        }
+
+        /// <summary>
+        /// Gera uma matriz de visualização 2D que leva em conta posição, rotação e zoom.
+        /// </summary>
+        /// <returns>Uma matriz de visualização para ser usada como perspectiva.</returns>
+        public Matrix GetViewMatrix()
+        {
+            return
+                Matrix.CreateTranslation(new Vector3(-Position.X, -Position.Y, 0)) *
+                Matrix.CreateRotationZ(Rotation) *
+                Matrix.CreateScale(Zoom, Zoom, 1.0f) *
+                Matrix.CreateTranslation(new Vector3(_viewport.Width * 0.5f, _viewport.Height * 0.5f, 0));
+        }
+
+        /// <summary>
+        /// Converte a matriz de visualização da câmera em um Rectangle.
+        /// </summary>
+        /// <returns>Área visível da câmera em formato de Rectangle</returns>
+        public Rectangle GetVisibleArea()
+        {
+            var inverseViewMatrix = Matrix.Invert(GetViewMatrix());
+
+            var topLeft = Vector2.Transform(Vector2.Zero, inverseViewMatrix);
+            var topRight = Vector2.Transform(new Vector2(_viewport.Width, 0), inverseViewMatrix);
+            var bottomLeft = Vector2.Transform(new Vector2(0, _viewport.Height), inverseViewMatrix);
+            var bottomRight = Vector2.Transform(new Vector2(_viewport.Width, _viewport.Height), inverseViewMatrix);
+
+            var minX = Math.Min(topLeft.X, Math.Min(topRight.X, Math.Min(bottomLeft.X, bottomRight.X)));
+            var maxX = Math.Max(topLeft.X, Math.Max(topRight.X, Math.Max(bottomLeft.X, bottomRight.X)));
+            var minY = Math.Min(topLeft.Y, Math.Min(topRight.Y, Math.Min(bottomLeft.Y, bottomRight.Y)));
+            var maxY = Math.Max(topLeft.Y, Math.Max(topRight.Y, Math.Max(bottomLeft.Y, bottomRight.Y)));
+
+            return new Rectangle((int)minX, (int)minY, (int)(maxX - minX), (int)(maxY - minY));
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\World\Camera.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\World\Chunk.cs
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using sunmoon.Core.ECS;
+
+namespace sunmoon.Core.World
+{
+    /// <summary>
+    /// Representa uma divisão fixa np mapa usada para organizar e renderizar (tiles) de forma eficiênte
+    /// </summary>
+    public class Chunk
+    {
+        public const int CHUNK_WIDTH = 16;
+        public const int CHUNK_HEIGHT = 16;
+
+        private readonly GameObject[,] _tiles;
+
+        public Point ChunkPosition { get; set; }
+        public Rectangle BoundingBox { get; set; }
+
+        public Chunk(Point chunkPosition, int tileSize)
+        {
+            ChunkPosition = chunkPosition;
+            _tiles = new GameObject[CHUNK_WIDTH, CHUNK_HEIGHT];
+
+            int worldX = chunkPosition.X * CHUNK_WIDTH * tileSize;
+            int worldY = chunkPosition.Y * CHUNK_HEIGHT * tileSize;
+            int width = CHUNK_WIDTH * tileSize;
+            int height = CHUNK_HEIGHT * tileSize;
+
+            BoundingBox = new Rectangle(worldX, worldY, width, height);
+        }
+
+        /// <summary>
+        /// Adiciona um tile se a posição estiver dentro dos limites da chunk.
+        /// </summary>
+        /// <param name="x">Posição X na grade da chunk.</param>
+        /// <param name="y">Posição Y na grade da chunk.</param>
+        /// <param name="tile">GameObject a ser adicoinado.</param>
+        public void SetTile(int x, int y, GameObject tile)
+        {
+            if (x < 0 || x >= CHUNK_WIDTH || y < 0 || y >= CHUNK_HEIGHT)
+                return;
+
+            _tiles[y, x] = tile;
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            for (int y = 0; y < CHUNK_HEIGHT; y++)
+            {
+                for (int x = 0; y < CHUNK_WIDTH; x++)
+                {
+                    _tiles[y, x]?.Update(gameTime);
+                }
+            }
+        }
+
+        public void Draw(SpriteBatch spriteBatch)
+        {
+            for (int y = 0; y < CHUNK_HEIGHT; y++)
+            {
+                for (int x = 0; x < CHUNK_WIDTH; x++)
+                {
+                    _tiles[y, x]?.Draw(spriteBatch);
+                }
+            }
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\World\Chunk.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\World\ChunkBluePrint.cs
+
+using Microsoft.Xna.Framework;
+
+namespace sunmoon.Core.World
+{
+    /// <summary>
+    /// Contém os dados brutos necessários para construir um Chunk,
+    /// gerado em um thread segundário para ser processado no thread prícipal
+    /// </summary>
+    public class ChunkBluePrint
+    {
+        public Point ChunkPosition { get; }
+        public TileData[,] Tiles { get; }
+
+        public ChunkBluePrint(Point chunkPosition)
+        {
+            ChunkPosition = chunkPosition;
+            Tiles = new TileData[Chunk.CHUNK_WIDTH, Chunk.CHUNK_HEIGHT];
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\World\ChunkBluePrint.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\World\MapData.cs
+using System.Collections.Generic;
+using Microsoft.Xna.Framework;
+using Newtonsoft.Json;
+
+namespace sunmoon.Core.World
+{
+    /// <summary>
+    /// Estrutura de dados para mapas.
+    /// </summary>
+    public class MapData
+    {
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("tileSize")]
+        public int TileSize { get; set; }
+
+        [JsonProperty("palette")]
+        public Dictionary<char, string> Palette { get; set; }
+
+        [JsonProperty("origin")]
+        public Point Origin { get; set; }
+
+        [JsonProperty("layout")]
+        public List<string> Layout { get; set; }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\World\MapData.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\World\TileData.cs
+namespace sunmoon.Core.World
+{
+    /// <summary>
+    /// Estrutura leve que representa os dados de um único tile em um blueprint
+    /// </summary>
+    public struct TileData
+    {
+        public string PrefabName;
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\World\TileData.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\World\TileType.cs
+using Microsoft.Xna.Framework.Graphics;
+
+namespace sunmoon.Core.World
+{
+    public class TileType
+    {
+        public string Id { get; private set; }
+        public Texture2D Texture { get; private set; }
+
+        public TileType(string id, Texture2D texture)
+        {
+            Id = id;
+            Texture = texture;
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\World\TileType.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\World\WorldGenerator.cs
+
+
+namespace sunmoon.Core.World
+{
+    public class WorldGenerator
+    {
+        private readonly FastNoiseLite _noise;
+
+        public WorldGenerator(int seed)
+        {
+            _noise = new FastNoiseLite(seed);
+            _noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+
+            _noise.SetFrequency(0.02f);
+            _noise.SetFractalType(FastNoiseLite.FractalType.FBm);
+            _noise.SetFractalOctaves(5);
+            _noise.SetFractalLacunarity(2.0f);
+            _noise.SetFractalGain(0.5f);
+
+        }
+
+        /// <summary>
+        /// Obtém o tipo de tile para uma coordenada específica.
+        /// </summary>
+        /// <param name="x">Posição X no mapa de ruído.</param>
+        /// <param name="y">Posição Y no mapa de ruído.</param>
+        /// <returns>O tipo de tile dentro da lista de constantes que depende de regras específicas.</returns>
+        public string GetTilePrefabName(int x, int y)
+        {
+            float noiseValue = _noise.GetNoise(x, y);
+
+            if (noiseValue < -0.2)
+                return "Water";
+            else
+                return "Grass";
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Core\World\WorldGenerator.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\obj\Debug\net8.0-windows\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs
+// <autogenerated />
+using System;
+using System.Reflection;
+[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v8.0", FrameworkDisplayName = ".NET 8.0")]
+
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\obj\Debug\net8.0-windows\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\obj\Debug\net8.0-windows\sunmoon.AssemblyInfo.cs
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("sunmoon")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8f3fde926ce3c720f627602fba86ddd40c2b226a")]
+[assembly: System.Reflection.AssemblyProductAttribute("sunmoon")]
+[assembly: System.Reflection.AssemblyTitleAttribute("sunmoon")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+[assembly: System.Runtime.Versioning.TargetPlatformAttribute("Windows7.0")]
+[assembly: System.Runtime.Versioning.SupportedOSPlatformAttribute("Windows7.0")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\obj\Debug\net8.0-windows\sunmoon.AssemblyInfo.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Scenes\GamePlayScene.cs
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
+using sunmoon.Core.Management;
+using sunmoon.Core.Factory;
+using sunmoon.Core.ECS;
+using sunmoon.Core.World;
+using System;
+using sunmoon.Components.Core;
+using sunmoon.UI;
+using sunmoon.utils;
+using sunmoon.Core.Services;
+using sunmoon.Components.Items;
+using sunmoon.Components.Combat;
+
+
+namespace sunmoon.Scenes
+{
+    public class GamePlayScene : Scene
+    {
+        public TilemapManager TilemapManager;
+        private Camera _camera;
+        private TimeManager _timeManager;
+        private GameObject _player;
+        private TransformComponent _playerTransform;
+        private HealthComponent _playerHealth;
+        public UIManager uiManager;
+        private UIPanel _debugPanel;
+        private UIPanel _inventoryPanel;
+        private const int CHUNK_LOAD_RADIUS = 2;
+        private const int CHUNK_UNLOAD_RADIUS = 4;
+
+
+
+        public override void LoadContent(ContentManager content)
+        {
+            var graphicsDeviceService = (IGraphicsDeviceService)content.ServiceProvider.GetService(typeof(IGraphicsDeviceService));
+
+            if (graphicsDeviceService == null)
+                throw new InvalidOperationException($"IGraphicsDevice não encontrado. O serviço não foi registrado corretamente.");
+
+            var worldGenerator = new WorldGenerator(0);
+            TilemapManager = new TilemapManager(worldGenerator);
+
+            _camera = new Camera(graphicsDeviceService.GraphicsDevice.Viewport);
+            _camera.Zoom = 3;
+
+            _timeManager = new TimeManager();
+
+
+            GameObjectManager = new GameObjectManager();
+
+            _player = GameObjectFactory.Create("Player");
+            _playerTransform = _player.GetComponent<TransformComponent>();
+            _playerHealth = _player.GetComponent<HealthComponent>();
+            var playerEquipment = _player.GetComponent<EquipmentComponent>();
+            playerEquipment.EquipItem(GameObjectFactory.Create("NoodlesGlove"));
+            Console.WriteLine(playerEquipment.LeftHand);
+            GameObjectManager.Add(_player);
+
+            uiManager = new UIManager();
+
+            var font = content.Load<SpriteFont>("Fonts/DebugFont");
+
+            DebugService.Initialize(_timeManager, _playerTransform, _playerHealth, GameObjectManager, TilemapManager);
+
+            _debugPanel = new DebugPanel(font);
+            _inventoryPanel = new PlayerEquipmentPanel(font, playerEquipment);
+
+            uiManager.AddElement(_debugPanel);
+            uiManager.AddElement(_inventoryPanel);
+        }
+
+        public override void UnloadContent()
+        {
+            TilemapManager?.StopGenerationThread();
+        }
+
+        public override void Draw(SpriteBatch spriteBatch)
+        {
+            // Renderização dos elentos in-game
+            spriteBatch.Begin(
+                transformMatrix: _camera.GetViewMatrix(),
+                samplerState: SamplerState.PointClamp
+            );
+
+            TilemapManager.Draw(spriteBatch, _camera);
+            GameObjectManager.Draw(spriteBatch, _camera);
+
+            spriteBatch.End();
+
+            // Renderização da interface gráfica
+            spriteBatch.Begin();
+
+            uiManager.Draw(spriteBatch);
+
+            spriteBatch.End();
+
+        }
+
+        public override void Update(GameTime gameTime)
+        {
+            if (InputManager.IsActionPressed("ToggleDebug"))
+            {
+                if (_debugPanel.IsVisible)
+                    _debugPanel.IsVisible = false;
+                else
+                {
+                    _debugPanel.IsVisible = true;
+                }
+            }
+            if (InputManager.IsActionPressed("ToggleInventory"))
+            {
+                if (_inventoryPanel.IsVisible)
+                    _inventoryPanel.IsVisible = false;
+                else
+                {
+                    _inventoryPanel.IsVisible = true;
+                }
+            }
+
+            if (InputManager.IsActionPressed("TakeDemage")) _playerHealth.TakeDemage(10);
+
+            _timeManager.Update(gameTime);
+
+            GameObjectManager.Update(gameTime);
+
+            if (_player != null)
+            {
+                var playerTransform = _player.GetComponent<TransformComponent>();
+                _camera.Position = playerTransform.Position;
+            }
+
+
+
+            RequestChunksAroundCamera();
+            ManageChunkLifetime();
+            TilemapManager.ProcessGeneratedChunks();
+
+            uiManager.Update(gameTime);
+
+        }
+
+        private void RequestChunksAroundCamera()
+        {
+            int cameraChunkX = MathUtils.FloorDiv((int)_camera.Position.X, Chunk.CHUNK_WIDTH * TilemapManager.DEFAULT_TILE_SIZE);
+            int cameraChunkY = MathUtils.FloorDiv((int)_camera.Position.Y, Chunk.CHUNK_HEIGHT * TilemapManager.DEFAULT_TILE_SIZE);
+
+            for (int y = cameraChunkY - CHUNK_LOAD_RADIUS; y <= cameraChunkY + CHUNK_LOAD_RADIUS; y++)
+            {
+                for (int x = cameraChunkX - CHUNK_LOAD_RADIUS; x <= cameraChunkX + CHUNK_LOAD_RADIUS; x++)
+                {
+                    if (!TilemapManager.IsChunkRequestedOrExists(x, y))
+                    {
+                        TilemapManager.RequestChunkGeneration(x, y);
+                    }
+                }
+            }
+        }
+
+        private void ManageChunkLifetime()
+        {
+            int cameraChunkX = MathUtils.FloorDiv((int)_camera.Position.X, Chunk.CHUNK_WIDTH * TilemapManager.DEFAULT_TILE_SIZE);
+            int cameraChunkY = MathUtils.FloorDiv((int)_camera.Position.Y, Chunk.CHUNK_HEIGHT * TilemapManager.DEFAULT_TILE_SIZE);
+
+            TilemapManager.UnloadDistantChunks(cameraChunkX, cameraChunkY, CHUNK_UNLOAD_RADIUS);
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Scenes\GamePlayScene.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Scenes\Scene.cs
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
+using sunmoon.Core.Management;
+
+namespace sunmoon.Scenes
+{
+    public abstract class Scene
+    {
+        public GameObjectManager GameObjectManager { get; set; }
+        public ContentManager Content { get; set; }
+        public abstract void LoadContent(ContentManager content);
+        public abstract void UnloadContent();
+        public abstract void Update(GameTime gameTime);
+        public abstract void Draw(SpriteBatch spriteBatch);
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Scenes\Scene.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Scenes\SceneManager.cs
+
+using System;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
+
+namespace sunmoon.Scenes
+{
+    public static class SceneManager
+    {
+        private static Scene _currentScene;
+        private static Scene _nextScene;
+
+        private static ContentManager _content;
+        private static bool _isInitialized = false;
+
+        public static void Initialize(ContentManager content)
+        {
+            if (_isInitialized) return;
+            _content = new ContentManager(content.ServiceProvider, content.RootDirectory);
+            _isInitialized = true;
+        }
+
+        public static void LoadScene(Scene scene)
+        {
+            if (!_isInitialized)
+                throw new InvalidOperationException("SceneManger não foi inicializado. Chame Initialize() primeiro");
+
+            _nextScene = scene;
+        }
+
+        public static void PerformSceneChange()
+        {
+            if (_nextScene == null) return;
+
+            _currentScene?.UnloadContent();
+
+            _currentScene = _nextScene;
+            _nextScene = null;
+
+            _currentScene.LoadContent(_content);
+        }
+
+        public static void Update(GameTime gameTime)
+        {
+            PerformSceneChange();
+
+            _currentScene?.Update(gameTime);
+        }
+
+        public static void Draw(SpriteBatch spriteBatch)
+        {
+            _currentScene?.Draw(spriteBatch);
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Scenes\SceneManager.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\Scenes\TestScene.cs
+
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
+
+namespace sunmoon.Scenes
+{
+    public class TestScene : Scene
+    {
+        public override void LoadContent(ContentManager content)
+        {
+            
+        }
+
+        public override void UnloadContent()
+        {
+
+        }
+
+        public override void Update(GameTime gameTime)
+        {
+
+        }
+
+        public override void Draw(SpriteBatch spriteBatch)
+        {
+
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\Scenes\TestScene.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\UI\DebugPanel.cs
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using sunmoon.Core.Services;
+namespace sunmoon.UI
+{
+    public class DebugPanel : UIPanel
+    {
+        public DebugPanel(SpriteFont font) : base(new Point(0, 0), Vector2.Zero, new Color(255, 255, 255, 0.3f))
+        {
+            var stackPanel = new UIStackPanel(new Vector2(10, 10), 5f);
+            AddChild(stackPanel);
+
+            var dayCountLabel = new UILabel(font, () => $"Dia: {DebugService.DayCount}", Vector2.Zero, Color.White);
+            var currentTimeLabel = new UILabel(font, () => $"Horário: {DebugService.CurrentTime:F2}", Vector2.Zero, Color.White);
+            var playerPosLabel = new UILabel(font, () => $"Position: X={DebugService.PlayerPosition.X:F0}, Y={DebugService.PlayerPosition.Y:F0}", Vector2.Zero, Color.White);
+            var playerHealthLabel = new UILabel(font, () => $"Vida: {DebugService.PlayerCurrentHealth:F2}", Vector2.Zero, Color.White);
+            var fpsLabel = new UILabel(font, () => $"FPS: {DebugService.Fps:F0}", Vector2.Zero, Color.White);
+            var objectCountLabel = new UILabel(font, () => $"Objetos: {DebugService.ObjectsCount}", Vector2.Zero, Color.White);
+            var renderedObjectsLabel = new UILabel(font, () => $"Objetos renderizados: {DebugService.RenderedObjects}", Vector2.Zero, Color.White);
+            var renderedChunksLabel = new UILabel(font, () => $"Chunks renderizadas: {DebugService.RenderedChunks}", Vector2.Zero, Color.White);
+
+            stackPanel.AddChild(dayCountLabel);
+            stackPanel.AddChild(currentTimeLabel);
+            stackPanel.AddChild(playerPosLabel);
+            stackPanel.AddChild(playerHealthLabel);
+            stackPanel.AddChild(fpsLabel);
+            stackPanel.AddChild(objectCountLabel);
+            stackPanel.AddChild(renderedObjectsLabel);
+            stackPanel.AddChild(renderedChunksLabel);
+
+            IsVisible = false;
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\UI\DebugPanel.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\UI\PlayerEquipmentPanel.cs
+
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using sunmoon.Components.Items;
+
+namespace sunmoon.UI
+{
+    public class PlayerEquipmentPanel : UIPanel
+    {
+        public PlayerEquipmentPanel(SpriteFont font, EquipmentComponent equipmentComponent) : base(new Point(300, 300), new Vector2(30, 30), new Color(0, 0, 0, 100))
+        {
+            var stackPanel = new UIStackPanel(new Vector2(10, 10), 10f);
+
+            var rightHand = equipmentComponent.RightHand;
+            var leftHand = equipmentComponent.LeftHand;
+
+            var rightHandLabel = new UILabel(font, () => $"Mão direita: {equipmentComponent.RightHand?.GetComponent<ItemComponent>().Name}", Vector2.Zero, Color.White);
+            var leftHandLabel = new UILabel(font, () => $"Mão esquerda: {equipmentComponent.LeftHand?.GetComponent<ItemComponent>().Name}", Vector2.Zero, Color.White);
+
+
+            stackPanel.AddChild(rightHandLabel);
+            stackPanel.AddChild(leftHandLabel);
+
+            AddChild(stackPanel);
+
+            IsVisible = false;
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\UI\PlayerEquipmentPanel.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\UI\UIElement.cs
+
+using System.Collections.Generic;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+
+namespace sunmoon.UI
+{
+    public abstract class UIElement
+    {
+        public bool IsVisible { get; set; } = true;
+        public Vector2 LocalPosition { get; set; }
+
+        public Point Size { get; set; }
+
+        public UIElement Parent { get; private set; }
+
+        protected List<UIElement> Children { get; } = new List<UIElement>();
+
+        public Vector2 AbsolutePosition
+        {
+            get
+            {
+                if (Parent == null)
+                    return LocalPosition;
+
+                return Parent.AbsolutePosition + LocalPosition;
+            }
+        }
+
+        public virtual void AddChild(UIElement child)
+        {
+            child.Parent = this;
+            Children.Add(child);
+        }
+
+        public abstract void Update(GameTime gameTime);
+        public abstract void Draw(SpriteBatch spriteBatch);
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\UI\UIElement.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\UI\UILabel.cs
+using System;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+
+namespace sunmoon.UI
+{
+    public class UILabel : UIElement
+    {
+        public Func<string> GetText { get; set; }
+        public SpriteFont Font { get; set; }
+        public Color Color { get; set; }
+
+        private string _chachedString;
+
+        public UILabel(SpriteFont font, Func<string> getTextDelegate, Vector2 position, Color color)
+        {
+            Font = font;
+            GetText = getTextDelegate;
+            LocalPosition = position;
+            Color = color;
+        }
+
+        public override void Update(GameTime gameTime)
+        {
+            if (!IsVisible) return;
+
+            _chachedString = GetText();
+        }
+
+        public override void Draw(SpriteBatch spriteBatch)
+        {
+            if (!IsVisible) return;
+
+            // TODO: Implementar lódica de quebra de linha (word-wrapping) para textos longos.
+            spriteBatch.DrawString(Font, _chachedString, AbsolutePosition, Color);
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\UI\UILabel.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\UI\UIManager.cs
+
+using System.Collections.Generic;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+
+namespace sunmoon.UI
+{
+    public class UIManager
+    {
+        private List<UIElement> _rootElements = new List<UIElement>();
+
+        public void AddElement(UIElement element)
+        {
+            _rootElements.Add(element);
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            for (int i = _rootElements.Count - 1; i >= 0; i--)
+            {
+                _rootElements[i].Update(gameTime);
+            }
+        }
+
+        public void Draw(SpriteBatch spriteBatch)
+        {
+            foreach (var element in _rootElements)
+            {
+                element.Draw(spriteBatch);
+            }
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\UI\UIManager.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\UI\UIPanel.cs
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using sunmoon.utils;
+
+namespace sunmoon.UI
+{
+    public class UIPanel : UIElement
+    {
+        public Color BackgroundColor { get; set; }
+
+        public UIPanel(Point size, Vector2 position, Color color)
+        {
+            Size = size;
+            LocalPosition = position;
+            BackgroundColor = color;
+        }
+
+        public override void Update(GameTime gameTime)
+        {
+            if (!IsVisible) return;
+
+            foreach (var child in Children)
+            {
+                child.Update(gameTime);
+            }
+        }
+
+        public override void Draw(SpriteBatch spriteBatch)
+        {
+            if (!IsVisible) return;
+
+            spriteBatch.Draw(GraphicsUtils.GetPixelTexture(spriteBatch.GraphicsDevice), new Rectangle(AbsolutePosition.ToPoint(), Size), BackgroundColor);
+
+            foreach (var child in Children) {
+                child.Draw(spriteBatch);
+            }
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\UI\UIPanel.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\UI\UIStackPanel.cs
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+
+namespace sunmoon.UI
+{
+    public class UIStackPanel : UIElement
+    {
+        public float Spacing { get; set; }
+
+        public UIStackPanel(Vector2 position, float spacing = 5f)
+        {
+            LocalPosition = position;
+            Spacing = spacing;
+        }
+
+        public override void AddChild(UIElement child)
+        {
+            base.AddChild(child);
+            ArrangeChildren();
+        }
+
+        public void ArrangeChildren()
+        {
+            float currentY = 0;
+            foreach (var child in Children)
+            {
+                child.LocalPosition = new Vector2(0, currentY);
+
+                var label = child as UILabel;
+                if (label != null)
+                {
+                    currentY += label.Font.LineSpacing + Spacing;
+                }
+                else
+                {
+                    currentY += child.Size.Y + Spacing;
+                }
+            }
+        }
+
+        public override void Update(GameTime gameTime)
+        {
+            if (!IsVisible) return;
+
+            foreach (var child in Children)
+            {
+                child.Update(gameTime);
+            }
+        }
+
+        public override void Draw(SpriteBatch spriteBatch)
+        {
+            if (!IsVisible) return;
+
+            foreach (var child in Children)
+            {
+                child.Draw(spriteBatch);
+            }
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\UI\UIStackPanel.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\utils\GraphicsUtils.cs
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+
+namespace sunmoon.utils
+{
+    /// <summary>
+    /// Oferece uma coleção de funções relacionadas à gráficos.
+    /// </summary>
+    public static class GraphicsUtils
+    {
+        private static Texture2D _pixelTexture;
+
+        public static Texture2D GetPixelTexture(GraphicsDevice graphicsDevice)
+        {
+            if (_pixelTexture == null)
+            {
+                _pixelTexture = new Texture2D(graphicsDevice, 1, 1);
+                _pixelTexture.SetData(new[] { Color.White });
+            }
+            return _pixelTexture;
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\utils\GraphicsUtils.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\utils\JsonUtils.cs
+using System.IO;
+using System.Text.Json;
+
+namespace sunmoon.utils
+{
+    /// <summary>
+    /// Fornece uma coleção de funções para a manipulação de arquivos 
+    /// json e dados relacionados
+    /// </summary>
+    public static class JsonUtils
+    {
+        /// <summary>
+        /// Deserializa o arquivo json
+        /// </summary>
+        /// <typeparam name="T">Tipo de objeto a ser retornado</typeparam>
+        /// <param name="path">Caminho do arquivo json a ser carregado</param>
+        /// <returns>Objeto do arquivo json selecionado</returns>
+        public static T LoadJson<T>(string path)
+        {
+            using (StreamReader r = new StreamReader(path))
+            {
+                string json = r.ReadToEnd();
+                return JsonSerializer.Deserialize<T>(json);
+            }
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\utils\JsonUtils.cs
+
+>>>> Início de C:\Users\pablo\Desktop\sunmoon\sunmoon\utils\MathUtils.cs
+using System;
+
+namespace sunmoon.utils
+{
+    /// <summary>
+    /// Fornece uma coleção de funções matemáticas de utilidade geral.
+    /// </summary>
+    public static class MathUtils
+    {
+        /// <summary>
+        /// Calcula o valor de piso, que arredonda o resultado para baixo.
+        /// Útil para lidar com coordenadas de grid negativas.
+        /// </summary>
+        /// <param name="a">O dividendo</param>
+        /// <param name="n">O divisor</param>
+        /// <returns>O resultado da divisão arredondado para inteiro inferior mais próximo</returns>
+        public static int FloorDiv(int a, int n)
+        {
+            return (int)Math.Floor((double)a / n);
+        }
+
+        /// <summary>
+        /// Calcula o método matemático, que sempre retorna um resultado positivo.
+        /// Diferente do operador '%' do C#, que pode retornar negativos.
+        /// </summary>
+        /// <param name="a">O dividendo.</param>
+        /// <param name="n">O divisior</param>
+        /// <returns>o resultado da divisão, garantindo como não-negativo</returns>
+        public static int Mod(int a, int n)
+        {
+            return ((a % n) + n) % n;
+        }
+    }
+}
+>>>> Fim de C:\Users\pablo\Desktop\sunmoon\sunmoon\utils\MathUtils.cs

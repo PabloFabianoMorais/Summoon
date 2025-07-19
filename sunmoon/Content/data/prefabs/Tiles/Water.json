@@ -4,8 +4,18 @@
         "TagsComponent": {
             "Tags": ["Tile", "Walkable"]
         },
-        "SpriteRendererComponent": {
-            "TexturePath": "Textures/Tiles/Water"
+        "AnimatedSpriteComponent": {
+            "Animations": {
+                "Default": {
+                    "Name": "Default", 
+                    "TexturePath": "Textures/Tiles/Water",
+                    "FrameWidth": 8,
+                    "FrameHeight": 8,
+                    "FrameCount": 6,
+                    "FrameDuration": 0.8,
+                    "IsLooping": true
+                }
+            }
         }
     }
 }

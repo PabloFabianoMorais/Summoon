@@ -150,11 +150,12 @@ namespace sunmoon.Core.Management
                     chunksToRemove.Add(chunkPos);
                 }
 
-                foreach (var pos in chunksToRemove)
-                {
-                    _chunks.Remove(pos);
-                    _requestedChunks.TryRemove(pos, out _);
-                }
+            }
+            
+            foreach (var pos in chunksToRemove)
+            {
+                _chunks.Remove(pos);
+                _requestedChunks.TryRemove(pos, out _);
             }
         }
 
@@ -209,6 +210,14 @@ namespace sunmoon.Core.Management
         {
             _cancellationTokenSource?.Cancel();
             _generationTask?.Wait();
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            foreach (var chunk in _chunks.Values)
+            {
+                chunk.Update(gameTime);
+            }
         }
 
         public void Draw(SpriteBatch spriteBatch, Camera camera)

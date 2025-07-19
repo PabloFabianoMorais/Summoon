@@ -44,6 +44,17 @@ namespace sunmoon.Core.World
             _tiles[y, x] = tile;
         }
 
+        public void Update(GameTime gameTime)
+        {
+            for (int y = 0; y < CHUNK_HEIGHT; y++)
+            {
+                for (int x = 0; x < CHUNK_WIDTH; x++)
+                {
+                    _tiles[y, x]?.Update(gameTime);
+                }
+            }
+        }
+
         public void Draw(SpriteBatch spriteBatch)
         {
             for (int y = 0; y < CHUNK_HEIGHT; y++)
